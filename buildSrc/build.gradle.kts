@@ -14,6 +14,7 @@ val ktor_version = "3.0.1-eap-1122"
 dependencies {
     implementation(libs.kotlin.gradlePlugin)
     implementation(libs.kotlin.serialization)
+    implementation(kotlin("compiler-embeddable", libs.versions.kotlin.get()))
 
     val ktlint_version = libs.versions.ktlint.get()
     implementation("org.jmailen.gradle:kotlinter-gradle:$ktlint_version")
