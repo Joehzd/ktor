@@ -110,6 +110,8 @@ public class HttpClientConfig<T : HttpClientEngineConfig> {
     /**
      * Terminates [HttpClient.receivePipeline] if the status code is not successful (>=300).
      * Learn more from [Response validation](https://ktor.io/docs/response-validation.html).
+     *
+     * Please check [HttpCallValidator] documentation to learn more details.
      */
     public var expectSuccess: Boolean = false
 
