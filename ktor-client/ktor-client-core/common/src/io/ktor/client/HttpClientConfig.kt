@@ -127,6 +127,18 @@ public class HttpClientConfig<T : HttpClientEngineConfig> {
 
     /**
      * Installs the specified [plugin] and optionally configures it using the [configure] block.
+     *
+     * ```kotlin
+     * val client = HttpClient {
+     *     install(ContentNegotiation) {
+     *         // configuration block
+     *         json()
+     *     }
+     * }
+     * ```
+     *
+     * If the plugin is already installed
+     *
      * Learn more from [Plugins](https://ktor.io/docs/http-client-plugins.html).
      */
     public fun <TBuilder : Any, TPlugin : Any> install(
