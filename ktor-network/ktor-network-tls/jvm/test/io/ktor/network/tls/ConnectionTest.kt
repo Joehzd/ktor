@@ -1,8 +1,7 @@
 /*
- * Copyright 2014-2023 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
  */
 
-// ktlint-disable experimental:argument-list-wrapping
 package io.ktor.network.tls
 
 import io.ktor.network.selector.*
@@ -25,8 +24,6 @@ import java.security.*
 import java.security.cert.*
 import javax.net.ssl.*
 import kotlin.test.*
-import kotlin.test.Ignore
-import kotlin.test.Test
 
 @Suppress("UNCHECKED_CAST")
 @CoroutinesTimeout(20_000)
