@@ -16,6 +16,7 @@ ij_kotlin_packages_to_use_import_on_demand = java.util.*, io.ktor.**
 ktlint_standard_no-wildcard-imports = disabled
 ktlint_standard_trailing-comma-on-call-site = disabled
 ktlint_standard_trailing-comma-on-declaration-site = disabled
+ktlint_standard_no-empty-first-line-in-class-body = disabled
 ktlint_standard_filename = disabled
 ktlint_standard_class-naming = disabled
 ktlint_standard_annotation = disabled
