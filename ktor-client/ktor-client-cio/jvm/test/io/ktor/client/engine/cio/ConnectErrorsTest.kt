@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
  */
 
 package io.ktor.client.engine.cio
@@ -18,7 +18,6 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.utils.io.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.debug.junit5.*
 import org.junit.jupiter.api.extension.*
@@ -102,7 +101,8 @@ class ConnectErrorsTest {
                             }
                             client.getInputStream().readBytes()
                         }
-                    } catch (_: Exception) { }
+                    } catch (_: Exception) {
+                    }
                 }
                 assertEquals("OK", client.get("http://localhost:${serverSocket.localPort}/").body())
                 thread.join()
