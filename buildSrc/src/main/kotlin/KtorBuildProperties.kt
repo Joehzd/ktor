@@ -7,10 +7,6 @@ import org.gradle.api.tasks.testing.*
 import org.gradle.jvm.toolchain.*
 import org.gradle.kotlin.dsl.*
 
-/*
- * Copyright 2014-2021 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
- */
-
 private val java_version: String = System.getProperty("java.version", "8.0.0")
 
 private val versionComponents = java_version
