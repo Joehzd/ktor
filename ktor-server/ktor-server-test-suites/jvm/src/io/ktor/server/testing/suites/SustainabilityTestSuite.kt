@@ -1,6 +1,6 @@
 /*
-* Copyright 2014-2021 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
-*/
+ * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ */
 
 package io.ktor.server.testing.suites
 
@@ -510,7 +510,7 @@ abstract class SustainabilityTestSuite<TEngine : ApplicationEngine, TConfigurati
 
             dump()
 
-            /* use for debugging */
+            // Uncomment for debugging
 //        if (conns.any { !it.isDone }) {
 //             TimeUnit.SECONDS.sleep(500)
 //        }
@@ -664,7 +664,8 @@ abstract class SustainabilityTestSuite<TEngine : ApplicationEngine, TConfigurati
             }
         }
         ApplicationCallPipeline(environment = createTestEnvironment()).items
-            .filter { it != ApplicationCallPipeline.ApplicationPhase.Fallback } // fallback will reply with 404 and not 500
+            // fallback will reply with 404 and not 500
+            .filter { it != ApplicationCallPipeline.ApplicationPhase.Fallback }
             .forEach { phase ->
                 val server = createServer(log = logger) {
                     intercept(phase) {
