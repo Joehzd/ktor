@@ -100,6 +100,27 @@ class MockedTests {
                 .body<Unit>()
         }
     }
+
+    @Test
+    fun testContentLengthIsCheckedForByteArray() = testWithEngine(MockEngine) {
+        config {
+            engine {
+                addHandler { request ->
+                    respond("hello", headers = headersOf(HttpHeaders.ContentLength, "123"))
+                }
+            }
+        }
+
+        test { client ->
+            assertFailsWith<IllegalStateException> {
+                client.prepareGet(Url("http://host")) {
+                    url.path("path")
+                }.execute { response ->
+                    response.body<ByteArray>()
+                }
+            }
+        }
+    }
 }
 
 @Serializable
