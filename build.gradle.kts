@@ -2,10 +2,10 @@
  * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
  */
 
-import org.jetbrains.dokka.gradle.*
-import org.jetbrains.kotlin.gradle.dsl.*
-import org.jetbrains.kotlin.gradle.tasks.*
-import org.jetbrains.kotlin.konan.target.*
+import org.jetbrains.dokka.gradle.DokkaMultiModuleTask
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
+import org.jetbrains.kotlin.konan.target.HostManager
 
 val releaseVersion: String? by extra
 val eapVersion: String? by extra
@@ -61,6 +61,13 @@ plugins {
 
 doctor {
     enableTestCaching = false
+
+    // Disable JAVA_HOME validation as we use Daemon JVM discovery feature
+    // https://docs.gradle.org/current/userguide/gradle_daemon.html#sec:daemon_jvm_criteria
+    javaHome {
+        ensureJavaHomeIsSet = false
+        ensureJavaHomeMatches = false
+    }
 }
 
 subprojects {
