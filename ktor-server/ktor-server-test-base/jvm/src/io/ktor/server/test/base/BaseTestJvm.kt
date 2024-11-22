@@ -6,14 +6,17 @@
 package io.ktor.server.test.base
 
 import io.ktor.junit.*
+import io.ktor.junit.coroutines.*
 import io.ktor.test.dispatcher.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.debug.junit5.*
-import kotlinx.coroutines.test.*
-import org.junit.jupiter.api.*
-import java.lang.reflect.*
+import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.test.TestResult
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.TestInfo
+import java.lang.reflect.Method
 import java.util.*
-import kotlin.time.*
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 @CoroutinesTimeout(5 * 60 * 1000)
