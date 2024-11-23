@@ -4,6 +4,8 @@
 
 package io.ktor.util
 
+import io.ktor.util.digest
+import io.ktor.util.ohos.*
 import kotlinx.coroutines.*
 import org.khronos.webgl.*
 import kotlin.js.*
@@ -11,13 +13,30 @@ import kotlin.js.*
 /**
  * Generates a nonce string.
  */
+private fun Uint8Array.asByteArray(): ByteArray {
+    return Int8Array(buffer, byteOffset, length).asDynamic()
+}
 public actual fun generateNonce(): String {
-    val buffer = ByteArray(NONCE_SIZE_IN_BYTES).toJsArray()
-    when {
-        PlatformUtils.IS_NODE -> _crypto.randomFillSync(buffer)
-        else -> _crypto.getRandomValues(buffer)
+    if (PlatformUtils.IS_OHOS) {
+        return hex(OhosCrypto.createRandom().generateRandomSync(NONCE_SIZE_IN_BYTES).data.asByteArray() as ByteArray)
+    } else {
+        val buffer = ByteArray(NONCE_SIZE_IN_BYTES).toJsArray()
+        when {
+            PlatformUtils.IS_NODE -> _crypto.randomFillSync(buffer)
+            else -> _crypto.getRandomValues(buffer)
+        }
+        return hex(buffer.toByteArray())
     }
-    return hex(buffer.toByteArray())
+
+
+//
+//
+//    when {
+//        PlatformUtils.IS_OHOS ->OhosCrypto.createRandom().generateRandomSync(NONCE_SIZE_IN_BYTES).data.asDynamic() as ByteArray
+//        PlatformUtils.IS_NODE -> _crypto.randomFillSync(buffer)
+//        else -> _crypto.getRandomValues(buffer)
+//    }
+//    return hex(buffer.toByteArray())
 }
 
 /**
@@ -34,9 +53,14 @@ public actual fun Digest(name: String): Digest = object : Digest {
     }
 
     override suspend fun build(): ByteArray {
-        val snapshot = state.reduce { a, b -> a + b }.toJsArray()
-        val digestBuffer = _crypto.subtle.digest(name, snapshot).awaitBuffer()
-        val digestView = DataView(digestBuffer)
+        val snapshot = state.reduce { a, b -> a + b }
+        val digestView = if (PlatformUtils.IS_OHOS) {
+            val md = OhosCrypto.createMd(name)
+            val digestBuffer = md.digest(snapshot)
+            DataView(digestBuffer.buffer, digestBuffer.byteOffset, digestBuffer.length)
+        } else {
+            DataView(_crypto.subtle.digest(name, snapshot.toJsArray()).awaitBuffer())
+        }
         return ByteArray(digestView.byteLength) { digestView.getUint8(it) }
     }
 }

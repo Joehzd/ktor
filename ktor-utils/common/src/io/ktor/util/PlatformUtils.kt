@@ -15,7 +15,7 @@ public object PlatformUtils {
         is Platform.WasmJs -> platform.jsPlatform == Platform.JsPlatform.Node
         else -> false
     }
-
+    public val IS_OHOS: Boolean = platform == Platform.Ohos
     public val IS_JS: Boolean = platform is Platform.Js
     public val IS_WASM_JS: Boolean = platform is Platform.WasmJs
     public val IS_JVM: Boolean = platform == Platform.Jvm
@@ -34,6 +34,7 @@ public expect val PlatformUtils.platform: Platform
 public sealed class Platform {
     public data object Jvm : Platform()
     public data object Native : Platform()
+    public data object Ohos : Platform()
     public data class Js(val jsPlatform: JsPlatform) : Platform()
     public data class WasmJs(val jsPlatform: JsPlatform) : Platform()
 

@@ -109,7 +109,7 @@ doctor {
 }
 
 subprojects {
-    group = "io.ktor"
+    group = "com.bennyhuo.ktor"
     version = configuredVersion
     extra["hostManager"] = HostManager()
 

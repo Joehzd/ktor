@@ -6,10 +6,11 @@
 package io.ktor.util
 
 public actual val PlatformUtils.platform: Platform by lazy {
-    Platform.Js(
-        when {
-            hasNodeApi() -> Platform.JsPlatform.Node
-            else -> Platform.JsPlatform.Browser
-        }
-    )
+    when {
+        hasNodeApi() -> Platform.Js(
+            Platform.JsPlatform.Node
+        )
+        hasWindowApi() -> Platform.Js(Platform.JsPlatform.Browser)
+        else -> Platform.Ohos
+    }
 }

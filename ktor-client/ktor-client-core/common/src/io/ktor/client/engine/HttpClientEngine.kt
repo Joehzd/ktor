@@ -67,6 +67,7 @@ public interface HttpClientEngine : CoroutineScope, Closeable {
             validateHeaders(requestData)
             checkExtensions(requestData)
 
+            println("发送原始的 requestData：${requestData.toString()}")
             val responseData = executeWithinCallContext(requestData)
             val call = HttpClientCall(client, requestData, responseData)
 

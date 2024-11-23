@@ -24,5 +24,5 @@ public class TextContent(
 
     override fun bytes(): ByteArray = bytes
 
-    override fun toString(): String = "TextContent[$contentType] \"${text.take(30)}\""
+    override fun toString(): String = "TextContent[$contentType] \"${text}\""
 }

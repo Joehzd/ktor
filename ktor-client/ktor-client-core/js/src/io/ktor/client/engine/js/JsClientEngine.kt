@@ -147,7 +147,7 @@ private suspend fun WebSocket.awaitConnection(): WebSocket = suspendCancellableC
     }
 }
 
-private fun Event.asString(): String = buildString {
+public fun Event.asString(): String = buildString {
     append(JSON.stringify(this@asString, arrayOf("message", "target", "type", "isTrusted")))
 }
 
