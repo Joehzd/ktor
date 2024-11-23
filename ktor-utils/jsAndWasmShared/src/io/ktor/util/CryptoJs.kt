@@ -27,16 +27,6 @@ public actual fun generateNonce(): String {
         }
         return hex(buffer.toByteArray())
     }
-
-
-//
-//
-//    when {
-//        PlatformUtils.IS_OHOS ->OhosCrypto.createRandom().generateRandomSync(NONCE_SIZE_IN_BYTES).data.asDynamic() as ByteArray
-//        PlatformUtils.IS_NODE -> _crypto.randomFillSync(buffer)
-//        else -> _crypto.getRandomValues(buffer)
-//    }
-//    return hex(buffer.toByteArray())
 }
 
 /**

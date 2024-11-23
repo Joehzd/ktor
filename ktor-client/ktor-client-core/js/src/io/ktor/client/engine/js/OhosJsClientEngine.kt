@@ -56,7 +56,7 @@ internal class OhosJsClientEngine(
                 jsHeaders[key] = value
             }
             header = jsHeaders
-            println("body 没有写入之前数据: data:${data},byte:${data.body}，headers:${data.headers}")
+            println("body 没有写入之前: data:${data},headers:${data.headers}")
             val bodyBytes = when (val content = data.body) {
                 is OutgoingContent.ByteArrayContent -> content.bytes()
                 is OutgoingContent.ReadChannelContent -> content.readFrom().readRemaining().readByteArray()
@@ -69,7 +69,6 @@ internal class OhosJsClientEngine(
                 else -> null
             }
             bodyBytes?.let { extraData = Uint8Array(it.toTypedArray()).buffer }
-            println("body 数据: string:${bodyBytes.toString()},byte:$bodyBytes")
             connectTimeout = config.connectTimeout
             readTimeout = config.readTimeout
             usingProtocol = Http.HttpProtocol.HTTP1_1
