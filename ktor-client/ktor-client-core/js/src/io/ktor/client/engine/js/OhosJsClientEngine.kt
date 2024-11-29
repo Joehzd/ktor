@@ -103,7 +103,9 @@ internal class OhosJsClientEngine(
                 for (entry in js("Object").entries(response.header)) {
                     val key = entry[0]
                     val value = entry[1]
-                    append(key, value)
+                    println("key ${key.toString()} -- value ：${value.toString()}")
+                    // todo hzd  cookie 需要单独处理
+                    append(key.toString(), value.toString())
                 }
             },
             HttpProtocolVersion.HTTP_1_1,

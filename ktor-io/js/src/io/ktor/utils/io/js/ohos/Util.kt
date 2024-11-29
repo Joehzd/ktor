@@ -1,7 +1,6 @@
 package io.ktor.utils.io.js.ohos
 
 import io.ktor.utils.io.charsets.Decoder
-import io.ktor.utils.io.js.ohos.Util.TextDecoder
 import org.khronos.webgl.ArrayBufferView
 import org.khronos.webgl.Uint8Array
 
@@ -12,6 +11,9 @@ internal external class Util {
         val encoding: String
 
        fun decodeWithStream(buffer: Uint8Array, options: dynamic = definedExternally): String
+    }
+    internal class TextEncoder {
+        fun encode(input: String): Uint8Array
     }
 }
 
