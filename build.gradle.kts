@@ -60,7 +60,7 @@ plugins {
 }
 
 subprojects {
-    group = "com.bennyhuo.ktor"
+    group = "com.moonshot.ktor"
     version = configuredVersion
     extra["hostManager"] = HostManager()
 

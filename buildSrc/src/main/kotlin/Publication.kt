@@ -70,16 +70,11 @@ fun Project.configurePublication() {
     }
     configureAggregatingTasks()
 
-    val publishingUser: String? = System.getenv("PUBLISHING_USER")
-    val publishingPassword: String? = System.getenv("PUBLISHING_PASSWORD")
+    val publishingUser: String? = "android"
+    val publishingPassword: String? = "android@moonshot"
 
     val repositoryId: String? = System.getenv("REPOSITORY_ID")
-    val publishingUrl: String? = if (repositoryId?.isNotBlank() == true) {
-        println("Set publishing to repository $repositoryId")
-        "https://oss.sonatype.org/service/local/staging/deployByRepositoryId/$repositoryId"
-    } else {
-        System.getenv("PUBLISHING_URL")
-    }
+    val publishingUrl: String? = "http://192.168.202.222:8081/repository/kimi-android/"
 
     val publishLocal: Boolean by rootProject.extra
     val globalM2: String by rootProject.extra
@@ -97,6 +92,7 @@ fun Project.configurePublication() {
                         password = publishingPassword
                     }
                 }
+                isAllowInsecureProtocol = true
             }
             maven {
                 name = "testLocal"
