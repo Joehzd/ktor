@@ -1,10 +1,9 @@
 /*
- * Copyright 2014-2021 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
  */
 
 package io.ktor.client.plugins
 
-import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.network.sockets.*
 import io.ktor.client.plugins.api.*
@@ -219,6 +218,7 @@ public class HttpRequestRetryConfig {
  * }
  * ```
  */
+@OptIn(InternalAPI::class)
 @Suppress("NAME_SHADOWING")
 public val HttpRequestRetry: ClientPlugin<HttpRequestRetryConfig> = createClientPlugin(
     "RetryFeature",
@@ -240,11 +240,12 @@ public val HttpRequestRetry: ClientPlugin<HttpRequestRetryConfig> = createClient
         maxRetries: Int,
         shouldRetry: HttpRetryShouldRetryContext.(HttpRequest, HttpResponse) -> Boolean,
         call: HttpClientCall
-    ) = retryCount < maxRetries && shouldRetry(
-        HttpRetryShouldRetryContext(retryCount + 1),
-        call.request,
-        call.response
-    )
+    ) = retryCount < maxRetries &&
+        shouldRetry(
+            HttpRetryShouldRetryContext(retryCount + 1),
+            call.request,
+            call.response
+        )
 
     fun shouldRetryOnException(
         retryCount: Int,
@@ -252,11 +253,12 @@ public val HttpRequestRetry: ClientPlugin<HttpRequestRetryConfig> = createClient
         shouldRetry: HttpRetryShouldRetryContext.(HttpRequestBuilder, Throwable) -> Boolean,
         subRequest: HttpRequestBuilder,
         cause: Throwable
-    ) = retryCount < maxRetries && shouldRetry(
-        HttpRetryShouldRetryContext(retryCount + 1),
-        subRequest,
-        cause
-    )
+    ) = retryCount < maxRetries &&
+        shouldRetry(
+            HttpRetryShouldRetryContext(retryCount + 1),
+            subRequest,
+            cause
+        )
 
     fun prepareRequest(request: HttpRequestBuilder): HttpRequestBuilder {
         val subRequest = HttpRequestBuilder().takeFrom(request)
@@ -264,7 +266,9 @@ public val HttpRequestRetry: ClientPlugin<HttpRequestRetryConfig> = createClient
             val subRequestJob = subRequest.executionContext as CompletableJob
             if (cause == null) {
                 subRequestJob.complete()
-            } else subRequestJob.completeExceptionally(cause)
+            } else {
+                subRequestJob.completeExceptionally(cause)
+            }
         }
         return subRequest
     }
@@ -295,6 +299,10 @@ public val HttpRequestRetry: ClientPlugin<HttpRequestRetryConfig> = createClient
                 }
                 call = proceed(subRequest)
                 if (!shouldRetry(retryCount, maxRetries, shouldRetry, call)) {
+                    // throws exception if body is corrupt
+                    if (call.response.isSaved && !call.response.rawContent.isClosedForRead) {
+                        call.response.readBytes(0)
+                    }
                     break
                 }
                 HttpRetryEventData(subRequest, ++retryCount, call.response, null)

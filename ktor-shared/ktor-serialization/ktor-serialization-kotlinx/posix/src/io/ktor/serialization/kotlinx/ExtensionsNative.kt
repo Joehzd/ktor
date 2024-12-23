@@ -1,11 +1,12 @@
 /*
- * Copyright 2014-2022 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
  */
 
 package io.ktor.serialization.kotlinx
 
 import io.ktor.utils.io.*
 
+@Suppress("ObjectPropertyName")
 private val _providers: MutableList<KotlinxSerializationExtensionProvider> = mutableListOf()
 internal actual val providers: List<KotlinxSerializationExtensionProvider> = _providers
 

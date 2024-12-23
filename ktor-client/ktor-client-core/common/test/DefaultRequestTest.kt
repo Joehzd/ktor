@@ -1,3 +1,6 @@
+/*
+ * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ */
 
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
@@ -8,10 +11,6 @@ import io.ktor.http.*
 import io.ktor.test.dispatcher.*
 import io.ktor.util.*
 import kotlin.test.*
-
-/*
- * Copyright 2014-2021 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
- */
 
 class DefaultRequestTest {
 
@@ -249,6 +248,26 @@ class DefaultRequestTest {
         }
 
         request.execute()
+    }
+
+    @Test
+    fun testDefaultRequestConfigDoesntOverrideUserHeaders() = testSuspend {
+        val client = HttpClient(MockEngine) {
+            engine {
+                addHandler {
+                    respond(it.headers[HttpHeaders.ContentType] ?: "")
+                }
+            }
+
+            defaultRequest {
+                contentType(ContentType.Application.Json)
+            }
+        }
+        val response = client.get("/") {
+            contentType(ContentType.Application.Xml)
+        }
+
+        assertEquals("application/xml", response.bodyAsText())
     }
 }
 

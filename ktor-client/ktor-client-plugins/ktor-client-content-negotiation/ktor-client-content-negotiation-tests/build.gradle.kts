@@ -1,7 +1,5 @@
-import org.jetbrains.kotlin.gradle.targets.jvm.tasks.*
-
 /*
- * Copyright 2014-2021 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
  */
 
 description = "Common tests for client content negotiation"
@@ -12,7 +10,7 @@ plugins {
 
 kotlin.sourceSets.jvmMain {
     dependencies {
-        api(kotlin("test-junit5"))
+        api(libs.kotlin.test.junit5)
         api(project(":ktor-client:ktor-client-plugins:ktor-client-content-negotiation"))
         api(project(":ktor-server:ktor-server-cio"))
         api(project(":ktor-client:ktor-client-cio"))

@@ -1,6 +1,7 @@
 /*
-* Copyright 2014-2021 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
-*/
+ * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ */
+
 package io.ktor.client.tests.plugins
 
 import io.ktor.client.call.*
@@ -815,6 +816,21 @@ class CacheTest : ClientLoader() {
         }
         test { client ->
             client.get("$TEST_SERVER/cache/set-max-age").apply {
+                assertEquals(HttpStatusCode.OK, status)
+            }
+        }
+    }
+
+    @Test
+    fun testInvalidMaxAge() = clientTests {
+        config {
+            install(HttpCache)
+        }
+
+        test { client ->
+            val url = Url("$TEST_SERVER/cache/invalid-max-age")
+
+            client.get(url).apply {
                 assertEquals(HttpStatusCode.OK, status)
             }
         }

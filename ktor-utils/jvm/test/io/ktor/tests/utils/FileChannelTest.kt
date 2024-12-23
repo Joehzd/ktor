@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
  */
 
 package io.ktor.tests.utils
@@ -9,13 +9,14 @@ import io.ktor.util.cio.*
 import io.ktor.utils.io.*
 import io.ktor.utils.io.jvm.javaio.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.extension.*
 import java.io.*
+import java.nio.file.Files
 import kotlin.test.*
 import kotlin.test.Test
 
-@ExtendWith(RetrySupport::class)
 class FileChannelTest {
     private val sandbox = File("build/files")
     private lateinit var temp: File
@@ -73,7 +74,6 @@ class FileChannelTest {
         assertEquals(byteArrayOf(7, 8, 9).toList(), temp.readChannel().toInputStream().use { it.readBytes().toList() })
     }
 
-    @RetryableTest // random failures on Windows agent
     @Test
     fun `readChannel should not lock file pre read`() {
         // Arrange
@@ -118,5 +118,15 @@ class FileChannelTest {
 
         // Assert (we cannot delete if there is a file handle open on it)
         assertTrue(temp.delete())
+    }
+
+    @Test
+    fun `writeChannel finishes on close`() = runTest {
+        val file = Files.createTempFile("file", "txt").toFile()
+        val ch = file.writeChannel()
+        ch.writeStringUtf8("Hello")
+        ch.flushAndClose()
+        assertEquals(5, file.length())
+        assertEquals("Hello", file.readText())
     }
 }

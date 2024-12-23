@@ -1,6 +1,6 @@
 /*
-* Copyright 2014-2021 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
-*/
+ * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ */
 
 package io.ktor.server.testing.suites
 
@@ -9,7 +9,6 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.http.content.*
-import io.ktor.junit.*
 import io.ktor.server.engine.*
 import io.ktor.server.http.content.*
 import io.ktor.server.plugins.partialcontent.*
@@ -18,13 +17,14 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.test.base.*
 import io.ktor.utils.io.*
-import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
-import org.junit.jupiter.api.extension.*
+import kotlinx.io.asSource
+import kotlinx.io.buffered
 import java.io.*
+import kotlin.io.use
 import kotlin.test.*
+import kotlin.text.toByteArray
 
-@ExtendWith(RetrySupport::class)
 abstract class ContentTestSuite<TEngine : ApplicationEngine, TConfiguration : ApplicationEngine.Configuration>(
     hostFactory: ApplicationEngineFactory<TEngine, TConfiguration>
 ) : EngineTestBase<TEngine, TConfiguration>(hostFactory) {
@@ -422,7 +422,6 @@ abstract class ContentTestSuite<TEngine : ApplicationEngine, TConfiguration : Ap
         }
     }
 
-    @RetryableTest
     @Test
     fun testStaticServe() = runTest {
         createAndStartServer {
@@ -815,6 +814,41 @@ abstract class ContentTestSuite<TEngine : ApplicationEngine, TConfiguration : Ap
                 byte = input.read()
                 readingStarted = true
             } while (byte >= 0)
+        }
+    }
+
+    @Test
+    fun respondSourceFromInputStream() = runTest {
+        val testString = "test".repeat(100)
+        createAndStartServer {
+            get("/raw") {
+                call.respondSource(
+                    testString.toByteArray().inputStream().asSource(),
+                    contentType = ContentType.Text.Plain
+                )
+            }
+            get("/buffered") {
+                call.respondSource(
+                    testString.toByteArray().inputStream().asSource().buffered(),
+                    contentType = ContentType.Text.Plain
+                )
+            }
+            get("/truncated") {
+                call.respondSource(
+                    testString.toByteArray().inputStream().asSource(),
+                    contentType = ContentType.Text.Plain,
+                    contentLength = 20
+                )
+            }
+        }
+        withUrl("/raw") {
+            assertEquals(testString, bodyAsText(), "Unbuffered input stream content mismatch")
+        }
+        withUrl("/buffered") {
+            assertEquals(testString, bodyAsText(), "Buffered input stream content mismatch")
+        }
+        withUrl("/truncated") {
+            assertEquals(testString.substring(0, 20), bodyAsText(), "Buffered input stream content mismatch")
         }
     }
 

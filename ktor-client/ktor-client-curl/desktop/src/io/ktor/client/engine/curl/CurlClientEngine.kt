@@ -9,9 +9,9 @@ import io.ktor.client.engine.curl.internal.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.sse.*
 import io.ktor.client.request.*
+import io.ktor.client.utils.dropCompressionHeaders
 import io.ktor.http.*
 import io.ktor.http.cio.*
-import io.ktor.util.*
 import io.ktor.util.date.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.*
@@ -39,11 +39,14 @@ internal class CurlClientEngine(
                 readUTF8Line()
             }
             val rawHeaders = parseHeaders(headerBytes)
+            val headers = rawHeaders
+                .toBuilder().apply {
+                    dropCompressionHeaders(data.method, data.attributes)
+                }.build()
+
+            rawHeaders.release()
 
             val status = HttpStatusCode.fromValue(status)
-
-            val headers = HeadersImpl(rawHeaders.toMap())
-            rawHeaders.release()
 
             val responseBody: Any = data.attributes.getOrNull(ResponseAdapterAttributeKey)
                 ?.adapt(data, status, headers, bodyChannel, data.body, callContext)

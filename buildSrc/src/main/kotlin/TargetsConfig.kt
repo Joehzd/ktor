@@ -5,30 +5,28 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
 import org.gradle.api.*
-import org.gradle.api.tasks.testing.*
 import org.gradle.kotlin.dsl.*
 import org.jetbrains.kotlin.gradle.*
 import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.plugin.mpp.*
 import org.jetbrains.kotlin.konan.target.*
-import org.jetbrains.kotlin.gradle.tasks.*
 import java.io.*
 
 private val Project.files: Array<File> get() = project.projectDir.listFiles() ?: emptyArray()
 val Project.hasCommon: Boolean get() = files.any { it.name == "common" }
+val Project.hasNonJvm: Boolean get() = files.any { it.name == "nonJvm" }
 val Project.hasJvmAndPosix: Boolean get() = hasCommon || files.any { it.name == "jvmAndPosix" }
-val Project.hasJvmAndNix: Boolean get() = hasCommon || files.any { it.name == "jvmAndNix" }
-val Project.hasPosix: Boolean get() = hasCommon || hasJvmAndPosix || files.any { it.name == "posix" }
+val Project.hasPosix: Boolean get() = hasCommon || hasNonJvm || hasJvmAndPosix || files.any { it.name == "posix" }
 val Project.hasDesktop: Boolean get() = hasPosix || files.any { it.name == "desktop" }
-val Project.hasNix: Boolean get() = hasPosix || hasJvmAndNix || files.any { it.name == "nix" }
+val Project.hasNix: Boolean get() = hasPosix || files.any { it.name == "nix" }
 val Project.hasLinux: Boolean get() = hasNix || files.any { it.name == "linux" }
 val Project.hasDarwin: Boolean get() = hasNix || files.any { it.name == "darwin" }
 val Project.hasAndroidNative: Boolean get() = hasPosix || files.any { it.name == "androidNative" }
 val Project.hasWindows: Boolean get() = hasPosix || files.any { it.name == "windows" }
-val Project.hasJsAndWasmShared: Boolean get() = files.any { it.name == "jsAndWasmShared" }
-val Project.hasJs: Boolean get() = hasCommon || files.any { it.name == "js" } || hasJsAndWasmShared
-val Project.hasWasm: Boolean get() = hasCommon || files.any { it.name == "wasmJs" } || hasJsAndWasmShared
-val Project.hasJvm: Boolean get() = hasCommon || hasJvmAndNix || hasJvmAndPosix || files.any { it.name == "jvm" }
+val Project.hasJsAndWasmShared: Boolean get() = hasCommon || hasNonJvm || files.any { it.name == "jsAndWasmShared" }
+val Project.hasJs: Boolean get() = hasJsAndWasmShared || files.any { it.name == "js" }
+val Project.hasWasmJs: Boolean get() = hasJsAndWasmShared || files.any { it.name == "wasmJs" }
+val Project.hasJvm: Boolean get() = hasCommon || hasJvmAndPosix || files.any { it.name == "jvm" }
 
 val Project.hasExplicitNative: Boolean
     get() = hasNix || hasPosix || hasLinux || hasAndroidNative || hasDarwin || hasDesktop || hasWindows
@@ -42,7 +40,7 @@ fun Project.configureTargets() {
         if (hasJvm) configureJvm()
 
         if (hasJs) configureJs()
-        if (hasWasm) configureWasm()
+        if (hasWasmJs) configureWasm()
 
         if (hasPosix) posixTargets()
         if (hasNix) nixTargets()
@@ -112,15 +110,15 @@ private val hierarchyTemplate = KotlinHierarchyTemplate {
             group("posix")
         }
 
-        group("jvmAndNix") {
-            withJvm()
-            group("nix")
-        }
-
         group("desktop") {
             group("linux")
             group("windows")
             group("macos")
+        }
+
+        group("nonJvm") {
+            group("posix")
+            group("jsAndWasmShared")
         }
     }
 }

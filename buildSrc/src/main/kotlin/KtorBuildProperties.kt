@@ -2,22 +2,8 @@
  * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
  */
 
-import org.gradle.api.*
-import org.gradle.api.tasks.testing.*
-import org.gradle.jvm.toolchain.*
-import org.gradle.kotlin.dsl.*
-
-/*
- * Copyright 2014-2021 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
- */
-
-private val java_version: String = System.getProperty("java.version", "8.0.0")
-
-private val versionComponents = java_version
-    .split(".")
-    .take(2)
-    .filter { it.isNotBlank() }
-    .map { Integer.parseInt(it) }
+import org.gradle.api.JavaVersion
+import org.gradle.api.Project
 
 val IDEA_ACTIVE: Boolean = System.getProperty("idea.active") == "true"
 
@@ -30,24 +16,42 @@ val HOST_NAME = when {
     else -> error("Unknown os name `$OS_NAME`")
 }
 
-val currentJdk = if (versionComponents[0] == 1) versionComponents[1] else versionComponents[0]
+private var _testJdk = 0
 
-val jdk11Modules = listOf(
+/**
+ * Retrieves the JDK version for running tests.
+ *
+ * Takes the version from property "test.jdk" or uses Gradle JDK by default.
+ * For example, to run tests against JDK 8, run test task with flag "-Ptest.jdk=8"
+ * or put this property to `gradle.properties`.
+ */
+val Project.testJdk: Int
+    get() {
+        if (_testJdk == 0) {
+            _testJdk = rootProject.properties["test.jdk"]?.toString()?.toInt()
+                ?: JavaVersion.current().majorVersion.toInt()
+            logger.info("Running tests against JDK $_testJdk")
+        }
+        return _testJdk
+    }
+
+val Project.requiredJdkVersion: Int
+    get() = when {
+        name in jdk17Modules -> 17
+        name in jdk11Modules -> 11
+        else -> 8
+    }
+
+private val jdk17Modules = setOf(
+    "ktor-server-jte",
+)
+
+private val jdk11Modules = setOf(
     "ktor-client-java",
-    "ktor-server-servlet-jakarta",
     "ktor-client-jetty-jakarta",
     "ktor-server-jetty-jakarta",
     "ktor-server-jetty-test-http2-jakarta",
+    "ktor-server-openapi",
+    "ktor-server-servlet-jakarta",
     "ktor-server-tomcat-jakarta",
 )
-
-fun Project.useJdkVersionForJvmTests(version: Int) {
-    tasks.named<Test>("jvmTest") {
-        val javaToolchains = project.extensions.getByType<JavaToolchainService>()
-        javaLauncher.set(
-            javaToolchains.launcherFor {
-                languageVersion.set(JavaLanguageVersion.of(version))
-            }
-        )
-    }
-}

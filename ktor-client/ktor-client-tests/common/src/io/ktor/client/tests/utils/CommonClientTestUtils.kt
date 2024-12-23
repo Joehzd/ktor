@@ -1,8 +1,6 @@
 /*
- * Copyright 2014-2019 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
  */
-
-@file:Suppress("NO_EXPLICIT_RETURN_TYPE_IN_API_MODE_WARNING", "KDocMissingDocumentation")
 
 package io.ktor.client.tests.utils
 
@@ -10,7 +8,7 @@ import io.ktor.client.*
 import io.ktor.client.engine.*
 import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.test.runTest
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
@@ -34,8 +32,9 @@ const val TCP_SERVER: String = "http://127.0.0.1:8082"
 fun testWithEngine(
     engine: HttpClientEngine,
     timeoutMillis: Long = 60 * 1000L,
+    retries: Int = 1,
     block: suspend TestClientBuilder<*>.() -> Unit
-) = testWithClient(HttpClient(engine), timeoutMillis, block)
+) = testWithClient(HttpClient(engine), timeoutMillis, retries, block)
 
 /**
  * Perform test with selected [client].
@@ -43,29 +42,44 @@ fun testWithEngine(
 private fun testWithClient(
     client: HttpClient,
     timeout: Long,
+    retries: Int,
     block: suspend TestClientBuilder<HttpClientEngineConfig>.() -> Unit
 ) = runTest(timeout = timeout.milliseconds) {
-    val builder1 = TestClientBuilder<HttpClientEngineConfig>().also { it.block() }
-    concurrency(builder1.concurrency) { threadId ->
-        repeat(builder1.repeatCount) { attempt ->
-            @Suppress("UNCHECKED_CAST")
-            client.config { builder1.config(this as HttpClientConfig<HttpClientEngineConfig>) }
-                .use { client -> builder1.test(TestInfo(threadId, attempt), client) }
+    val builder = TestClientBuilder<HttpClientEngineConfig>().also { it.block() }
+
+    retryTest(retries) {
+        concurrency(builder.concurrency) { threadId ->
+            repeat(builder.repeatCount) { attempt ->
+                @Suppress("UNCHECKED_CAST")
+                client.config { builder.config(this as HttpClientConfig<HttpClientEngineConfig>) }
+                    .use { client -> builder.test(TestInfo(threadId, attempt), client) }
+            }
         }
     }
+
     client.engine.close()
 }
 
 /**
  * Perform test with selected client engine [factory].
  */
-@OptIn(DelicateCoroutinesApi::class)
 fun <T : HttpClientEngineConfig> testWithEngine(
     factory: HttpClientEngineFactory<T>,
     loader: ClientLoader? = null,
     timeoutMillis: Long = 60L * 1000L,
+    retries: Int = 1,
     block: suspend TestClientBuilder<T>.() -> Unit
 ) = runTest(timeout = timeoutMillis.milliseconds) {
+    performTestWithEngine(factory, loader, retries, block)
+}
+
+@OptIn(DelicateCoroutinesApi::class)
+suspend fun <T : HttpClientEngineConfig> performTestWithEngine(
+    factory: HttpClientEngineFactory<T>,
+    loader: ClientLoader? = null,
+    retries: Int = 1,
+    block: suspend TestClientBuilder<T>.() -> Unit
+) {
     val builder = TestClientBuilder<T>().apply { block() }
 
     if (builder.dumpAfterDelay > 0 && loader != null) {
@@ -75,27 +89,41 @@ fun <T : HttpClientEngineConfig> testWithEngine(
         }
     }
 
-    withContext(Dispatchers.Default.limitedParallelism(1)) {
-        concurrency(builder.concurrency) { threadId ->
-            repeat(builder.repeatCount) { attempt ->
-                val client = HttpClient(factory, block = builder.config)
+    retryTest(retries) {
+        withContext(Dispatchers.Default.limitedParallelism(1)) {
+            concurrency(builder.concurrency) { threadId ->
+                repeat(builder.repeatCount) { attempt ->
+                    val client = HttpClient(factory, block = builder.config)
 
-                client.use {
-                    builder.test(TestInfo(threadId, attempt), it)
-                }
-
-                try {
-                    val job = client.coroutineContext[Job]!!
-                    while (job.isActive) {
-                        yield()
+                    client.use {
+                        builder.test(TestInfo(threadId, attempt), it)
                     }
-                } catch (cause: Throwable) {
-                    client.cancel("Test failed", cause)
-                    throw cause
-                } finally {
-                    builder.after(client)
+
+                    try {
+                        val job = client.coroutineContext[Job]!!
+                        while (job.isActive) {
+                            yield()
+                        }
+                    } catch (cause: Throwable) {
+                        client.cancel("Test failed", cause)
+                        throw cause
+                    } finally {
+                        builder.after(client)
+                    }
                 }
             }
+        }
+    }
+}
+
+internal suspend fun <T> retryTest(attempts: Int, block: suspend () -> T): T {
+    var currentAttempt = 0
+    while (true) {
+        try {
+            return block()
+        } catch (cause: Throwable) {
+            if (currentAttempt >= attempts) throw cause
+            currentAttempt++
         }
     }
 }
@@ -127,6 +155,6 @@ fun TestClientBuilder<*>.test(block: suspend TestInfo.(client: HttpClient) -> Un
     test = block
 }
 
-fun TestClientBuilder<*>.after(block: suspend (client: HttpClient) -> Unit) { // ktlint-disable no-unit-return
+fun TestClientBuilder<*>.after(block: suspend (client: HttpClient) -> Unit) {
     after = block
 }

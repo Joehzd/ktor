@@ -1,3 +1,7 @@
+/*
+ * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ */
+
 description = ""
 
 val jetty_alpn_boot_version: String? by extra
@@ -6,7 +10,7 @@ kotlin.sourceSets {
     commonMain {
         dependencies {
             api(project(":ktor-server:ktor-server-test-host"))
-            api(kotlin("test"))
+            api(libs.kotlin.test)
         }
     }
 
@@ -22,9 +26,6 @@ kotlin.sourceSets {
             if (jetty_alpn_boot_version != null) {
                 api(libs.jetty.alpn.boot)
             }
-
-            api(libs.junit)
-            implementation(libs.kotlinx.coroutines.debug)
         }
     }
 }

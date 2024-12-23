@@ -1,3 +1,7 @@
+/*
+ * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ */
+
 package io.ktor.network.selector
 
 import io.ktor.utils.io.core.*
@@ -39,7 +43,10 @@ public expect interface SelectorManager : CoroutineScope, Closeable {
  * Select interest kind.
  */
 public expect enum class SelectInterest {
-    READ, WRITE, ACCEPT, CONNECT;
+    READ,
+    WRITE,
+    ACCEPT,
+    CONNECT;
 
     public companion object {
         public val AllInterests: Array<SelectInterest>

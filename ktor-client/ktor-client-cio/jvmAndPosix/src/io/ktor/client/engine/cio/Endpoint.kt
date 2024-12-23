@@ -38,8 +38,6 @@ internal class Endpoint(
     private val deliveryPoint: Channel<RequestTask> = Channel()
     private val maxEndpointIdleTime: Long = 2 * config.endpoint.connectTimeout
 
-    private var connectionAddress: InetSocketAddress? = null
-
     private val timeout = launch(coroutineContext + CoroutineName("Endpoint timeout($host:$port)")) {
         try {
             while (true) {
@@ -94,13 +92,12 @@ internal class Endpoint(
         deliveryPoint.send(task)
     }
 
-    @OptIn(InternalAPI::class)
     private suspend fun makeDedicatedRequest(
         request: HttpRequestData,
         callContext: CoroutineContext
     ): HttpResponseData {
         try {
-            val connection = connect(request)
+            val (address, connection) = connect(request)
             val input = connection.input
             val originOutput = connection.output
 
@@ -118,7 +115,7 @@ internal class Endpoint(
                 } catch (cause: Throwable) {
                     LOGGER.debug("An error occurred while closing connection", cause)
                 } finally {
-                    releaseConnection()
+                    releaseConnection(address)
                 }
             }
 
@@ -182,7 +179,7 @@ internal class Endpoint(
     }
 
     private suspend fun createPipeline(request: HttpRequestData) {
-        val connection = connect(request)
+        val (address, connection) = connect(request)
 
         val pipeline = ConnectionPipeline(
             config.endpoint.keepAliveTime,
@@ -193,11 +190,11 @@ internal class Endpoint(
             coroutineContext
         )
 
-        pipeline.pipelineContext.invokeOnCompletion { releaseConnection() }
+        pipeline.pipelineContext.invokeOnCompletion { releaseConnection(address) }
     }
 
     @Suppress("UNUSED_EXPRESSION")
-    private suspend fun connect(requestData: HttpRequestData): Connection {
+    private suspend fun connect(requestData: HttpRequestData): Pair<InetSocketAddress, Connection> {
         val connectAttempts = config.endpoint.connectAttempts
         val (connectTimeout, socketTimeout) = retrieveTimeouts(requestData)
         var timeoutFails = 0
@@ -211,7 +208,7 @@ internal class Endpoint(
                 val connect: suspend CoroutineScope.() -> Socket = {
                     connectionFactory.connect(address) {
                         this.socketTimeout = socketTimeout
-                    }.also { connectionAddress = address }
+                    }
                 }
 
                 val socket = when (connectTimeout) {
@@ -227,7 +224,7 @@ internal class Endpoint(
                 }
 
                 val connection = socket.connection()
-                if (!secure) return@connect connection
+                if (!secure) return@connect address to connection
 
                 try {
                     if (proxy?.type == ProxyType.HTTP) {
@@ -241,7 +238,7 @@ internal class Endpoint(
                         takeFrom(config.https)
                         serverName = serverName ?: realAddress.hostname
                     }
-                    return tlsSocket.connection()
+                    return address to tlsSocket.connection()
                 } catch (cause: Throwable) {
                     try {
                         socket.close()
@@ -288,8 +285,7 @@ internal class Endpoint(
         return connectTimeout to socketTimeout
     }
 
-    private fun releaseConnection() {
-        val address = connectionAddress ?: return
+    private fun releaseConnection(address: InetSocketAddress) {
         connectionFactory.release(address)
         connections.decrementAndGet()
     }

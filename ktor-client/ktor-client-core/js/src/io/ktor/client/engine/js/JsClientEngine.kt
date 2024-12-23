@@ -19,6 +19,7 @@ import kotlinx.coroutines.*
 import org.w3c.dom.*
 import org.w3c.dom.events.*
 import kotlin.coroutines.*
+import kotlin.js.Promise
 
 internal class JsClientEngine(
     override val config: JsClientEngineConfig,
@@ -51,7 +52,7 @@ internal class JsClientEngine(
         val rawResponse = commonFetch(data.url.toString(), rawRequest, config)
 
         val status = HttpStatusCode(rawResponse.status.toInt(), rawResponse.statusText)
-        val headers = rawResponse.headers.mapToKtor()
+        val headers = rawResponse.headers.mapToKtor(data.method, data.attributes)
         val version = HttpProtocolVersion.HTTP_1_1
 
         val body = CoroutineScope(callContext).readBody(rawResponse)
@@ -72,7 +73,7 @@ internal class JsClientEngine(
     // Adding "_capturingHack" to reduce chances of JS IR backend to rename variable,
     // so it can be accessed inside js("") function
     @Suppress("UNUSED_PARAMETER", "UnsafeCastFromDynamic", "UNUSED_VARIABLE", "LocalVariableName")
-    private fun createWebSocket(
+    private suspend fun createWebSocket(
         urlString_capturingHack: String,
         headers: Headers
     ): WebSocket {
@@ -83,7 +84,8 @@ internal class JsClientEngine(
         return when {
             PlatformUtils.IS_BROWSER -> js("new WebSocket(urlString_capturingHack, protocols)")
             else -> {
-                val ws_capturingHack = js("eval('require')('ws')")
+                val ws_import: Promise<dynamic> = js("import('ws')")
+                val ws_capturingHack = ws_import.await().default
                 val headers_capturingHack: dynamic = object {}
                 headers.forEach { name, values ->
                     headers_capturingHack[name] = values.joinToString(",")
@@ -151,12 +153,13 @@ public fun Event.asString(): String = buildString {
     append(JSON.stringify(this@asString, arrayOf("message", "target", "type", "isTrusted")))
 }
 
-private fun org.w3c.fetch.Headers.mapToKtor(): Headers = buildHeaders {
+@OptIn(InternalAPI::class)
+private fun org.w3c.fetch.Headers.mapToKtor(method: HttpMethod, attributes: Attributes): Headers = buildHeaders {
     this@mapToKtor.asDynamic().forEach { value: String, key: String ->
         append(key, value)
     }
 
-    Unit
+    dropCompressionHeaders(method, attributes)
 }
 
 /**

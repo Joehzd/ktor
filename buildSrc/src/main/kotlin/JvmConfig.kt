@@ -2,19 +2,17 @@
  * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
  */
 
-import internal.*
-import org.gradle.api.*
-import org.gradle.api.tasks.testing.*
-import org.gradle.jvm.tasks.*
-import org.gradle.jvm.toolchain.*
+import internal.libs
+import org.gradle.api.Project
+import org.gradle.api.tasks.testing.Test
+import org.gradle.jvm.tasks.Jar
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.jvm.toolchain.JavaToolchainService
 import org.gradle.kotlin.dsl.*
-import org.jetbrains.kotlin.gradle.targets.jvm.tasks.*
+import org.jetbrains.kotlin.gradle.targets.jvm.tasks.KotlinJvmTest
 
 fun Project.configureJvm() {
-    val jdk = when (name) {
-        in jdk11Modules -> 11
-        else -> 8
-    }
+    val compileJdk = project.requiredJdkVersion
 
     kotlin {
         jvm()
@@ -39,7 +37,7 @@ fun Project.configureJvm() {
     tasks.register<Jar>("jarTest") {
         dependsOn(tasks.named("jvmTestClasses"))
         archiveClassifier = "test"
-        from(kotlin.jvm().compilations.named("test").map { it.output })
+        from(kotlin.jvm().compilations["test"].output)
     }
 
     configurations {
@@ -52,11 +50,12 @@ fun Project.configureJvm() {
         }
     }
 
+    val testJdk = project.testJdk
     val jvmTest = tasks.named<KotlinJvmTest>("jvmTest") {
         maxHeapSize = "2g"
         exclude("**/*StressTest*")
         useJUnitPlatform()
-        configureJavaLauncher(jdk)
+        configureJavaToolchain(compileJdk, testJdk)
     }
 
     tasks.register<Test>("stressTest") {
@@ -69,7 +68,7 @@ fun Project.configureJvm() {
         systemProperty("enable.stress.tests", "true")
         include("**/*StressTest*")
         useJUnitPlatform()
-        configureJavaLauncher(jdk)
+        configureJavaToolchain(compileJdk, testJdk)
     }
 
     val configuredVersion: String by rootProject.extra
@@ -85,16 +84,31 @@ fun Project.configureJvm() {
     }
 }
 
-/**
- * JUnit 5 requires Java 11+
- */
-fun Test.configureJavaLauncher(jdk: Int) {
-    if (jdk < 11) {
-        val javaToolchains = project.extensions.getByType<JavaToolchainService>()
-        val customLauncher = javaToolchains.launcherFor {
-            languageVersion = JavaLanguageVersion.of("11")
-        }
-        javaLauncher = customLauncher
+/** Configure tests against different JDK versions. */
+private fun Test.configureJavaToolchain(compileJdk: Int, testJdk: Int) {
+    if (testJdk < compileJdk) {
+        enabled = false
+        return
+    }
+
+    val javaToolchains = project.the<JavaToolchainService>()
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(testJdk)
+    }
+
+    if (testJdk >= 16) {
+        // Allow reflective access from tests
+        jvmArgs(
+            "--add-opens=java.base/java.net=ALL-UNNAMED",
+            "--add-opens=java.base/java.time=ALL-UNNAMED",
+            "--add-opens=java.base/java.util=ALL-UNNAMED",
+        )
+    }
+
+    if (testJdk >= 21) {
+        // coroutines-debug use dynamic agent loading under the hood.
+        // Remove as soon as the issue is fixed: https://youtrack.jetbrains.com/issue/KT-62096/
+        jvmArgs("-XX:+EnableDynamicAgentLoading")
     }
 }
 

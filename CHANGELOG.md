@@ -1,3 +1,48 @@
+# 3.0.2
+> Published 3 December 2024
+
+### Bugfixes
+* ServletResponseBody is corrupted due to the wrong offset ([KTOR-7904](https://youtrack.jetbrains.com/issue/KTOR-7904))
+* File is not commited after closing writeChannel() of the file ([KTOR-7845](https://youtrack.jetbrains.com/issue/KTOR-7845))
+* CIO: Response body truncated because read amount of bytes isn't compared against Content-Length ([KTOR-7828](https://youtrack.jetbrains.com/issue/KTOR-7828))
+* HttpCache: IndexOutOfBoundsException on malformed Cache-Control header ([KTOR-7172](https://youtrack.jetbrains.com/issue/KTOR-7172))
+* call.respondSource returns empty response but passes in tests ([KTOR-7683](https://youtrack.jetbrains.com/issue/KTOR-7683))
+* ByteReadChannel.{readShort/readInt/readLong} leads to infinite loop when required bytes distributed in flush and read buffers ([KTOR-7746](https://youtrack.jetbrains.com/issue/KTOR-7746))
+* Routing: ContentType.match doesn't match wildcard content types ([KTOR-7278](https://youtrack.jetbrains.com/issue/KTOR-7278))
+* Connections aren't released properly if there are multiple parallel connections to the same address ([KTOR-7777](https://youtrack.jetbrains.com/issue/KTOR-7777))
+* `FileItem.streamProvider` is deprecated and doesn't have implementation ([KTOR-7731](https://youtrack.jetbrains.com/issue/KTOR-7731))
+* MergedApplicationConfig.toMap replaces nested configs completely without merging ([KTOR-7008](https://youtrack.jetbrains.com/issue/KTOR-7008))
+* Digest Auth: Ktor 3.0.1 uses the wrong "nc" value to calculate digest ([KTOR-7681](https://youtrack.jetbrains.com/issue/KTOR-7681))
+* JS: "ReferenceError: require is not defined" when compiling to ES Module ([KTOR-6158](https://youtrack.jetbrains.com/issue/KTOR-6158))
+* Chunked transfer encoding failure not caught with retry ([KTOR-7618](https://youtrack.jetbrains.com/issue/KTOR-7618))
+* HttpCookies: IllegalArgumentException when server returns a raw cookie with not allowed characters ([KTOR-7469](https://youtrack.jetbrains.com/issue/KTOR-7469))
+* DefaultRequest: Content-Type header of default request is not overridable ([KTOR-6946](https://youtrack.jetbrains.com/issue/KTOR-6946))
+
+### Improvements
+* Support binary (Smile) encoding in JacksonConverter ([KTOR-7726](https://youtrack.jetbrains.com/issue/KTOR-7726))
+* ServiceLoader.load call is slow on Android ([KTOR-7698](https://youtrack.jetbrains.com/issue/KTOR-7698))
+
+
+# 3.0.1
+> Published 29 October 2024
+
+### Bugfixes
+* Remove space from the default client user agent ([KTOR-7655](https://youtrack.jetbrains.com/issue/KTOR-7655))
+* `Url.segments` throws on URLs with root path ([KTOR-7625](https://youtrack.jetbrains.com/issue/KTOR-7625))
+* Digest Auth does not implement nc parameter correctly according to RFC 7616 ([KTOR-4318](https://youtrack.jetbrains.com/issue/KTOR-4318))
+* about:blank URL should be parsed correctly as about:blank ([KTOR-7410](https://youtrack.jetbrains.com/issue/KTOR-7410))
+* ByteReadChannel.{readShort/readInt/readLong} could lead to CPU-bound indefinite loop since 3.0.0 ([KTOR-7571](https://youtrack.jetbrains.com/issue/KTOR-7571))
+* CIO: Requests face connection timeouts when executed on the Android main dispatcher ([KTOR-6803](https://youtrack.jetbrains.com/issue/KTOR-6803))
+* receiveMultipart fails with "IOException: Failed to parse multipart" when content-type is capitalized ([KTOR-7596](https://youtrack.jetbrains.com/issue/KTOR-7596))
+
+### Improvements
+* WebSockets logging: The plugin calls toString() unnecessarily on transformed response body ([KTOR-7623](https://youtrack.jetbrains.com/issue/KTOR-7623))
+* INFO log message with all server interceptors on server startup ([KTOR-7326](https://youtrack.jetbrains.com/issue/KTOR-7326))
+* Digest auth: `username` and `cnonce` parameters aren't surrounded with quotes ([KTOR-7561](https://youtrack.jetbrains.com/issue/KTOR-7561))
+* ContentType.fromFilePath for newer file formats HEIC, AVIF, HEIF ([KTOR-7536](https://youtrack.jetbrains.com/issue/KTOR-7536))
+* Support missing native targets in ktor-serialization-kotlinx-xml ([KTOR-7583](https://youtrack.jetbrains.com/issue/KTOR-7583))
+
+
 # 3.0.0
 > Published 9 October 2024
 
@@ -140,6 +185,21 @@
 * SSE: Support handling HTTP failures ([KTOR-6808](https://youtrack.jetbrains.com/issue/KTOR-6808))
 * Ktor client for Kotlin/Wasm ([KTOR-5587](https://youtrack.jetbrains.com/issue/KTOR-5587))
 * CSRF protection feature ([KTOR-2910](https://youtrack.jetbrains.com/issue/KTOR-2910))
+
+
+# 2.3.13
+> Published 20 November 2024
+
+### Bugfixes
+* CIO: Requests face connection timeouts when executed on the Android main dispatcher ([KTOR-6803](https://youtrack.jetbrains.com/issue/KTOR-6803))
+* io.ktor.util.TextKt.chomp doesn't work on strings with more than one character ([KTOR-7209](https://youtrack.jetbrains.com/issue/KTOR-7209))
+* "java.lang.IllegalArgumentException: Failed requirement." in SelectorManagerSupport ([KTOR-2914](https://youtrack.jetbrains.com/issue/KTOR-2914))
+* Backport fix for CVE-2024-49580 to Ktor 2 ([KTOR-7727](https://youtrack.jetbrains.com/issue/KTOR-7727))
+
+### Improvements
+* Replace custom withTimeout implementation using WeakTimeoutQueue with coroutines.withTimeout ([KTOR-3658](https://youtrack.jetbrains.com/issue/KTOR-3658))
+* Add watchosDeviceArm64 target ([KTOR-6368](https://youtrack.jetbrains.com/issue/KTOR-6368))
+
 
 # 2.3.12
 > Published 20 June 2024

@@ -1,5 +1,5 @@
 /*
-* Copyright 2014-2021 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+* Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
 */
 
 package io.ktor.client.request
@@ -7,12 +7,33 @@ package io.ktor.client.request
 import io.ktor.client.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import kotlin.jvm.*
 
 /**
- * Executes an [HttpClient]'s request with the parameters specified using [builder].
+ * Executes an HTTP request using the provided [HttpRequestBuilder] configuration.
  *
- * Learn more from [Making requests](https://ktor.io/docs/request.html).
+ * This function sends a request with parameters specified in the [builder], allowing customization
+ * of request settings such as URL, HTTP method, headers, and body.
+ *
+ * ## Usage Example
+ * ```
+ * val client = HttpClient()
+ * val response = client.request {
+ *     url("https://ktor.io")
+ *     method = HttpMethod.Get
+ * }
+ * ```
+ * This example demonstrates making a GET request to "https://ktor.io".
+ *
+ * ## Note
+ * In addition to this generic [HttpClient.request] method, there are more specific extension functions, such as
+ * [HttpClient.get], [HttpClient.post], [HttpClient.put], and [HttpClient.delete], which are often more
+ * convenient for common HTTP methods.
+ *
+ * @param builder The [HttpRequestBuilder] used to configure request parameters. Defaults to an empty
+ * builder if none is provided.
+ * @return [HttpResponse] The response received from the server after executing the request.
+ *
+ * For more details, see [Making requests](https://ktor.io/docs/request.html).
  */
 public suspend inline fun HttpClient.request(
     builder: HttpRequestBuilder = HttpRequestBuilder()
@@ -26,9 +47,31 @@ public suspend inline fun HttpClient.prepareRequest(
 ): HttpStatement = HttpStatement(builder, this)
 
 /**
- * Executes an [HttpClient]'s request with the parameters specified in [block].
+ * Executes an HTTP request using the provided [HttpRequestBuilder] configuration.
  *
- * Learn more from [Making requests](https://ktor.io/docs/request.html).
+ * This function sends a request with parameters specified in the [block], allowing customization
+ * of request settings such as URL, HTTP method, headers, and body.
+ *
+ * ## Usage Example
+ * ```
+ * val client = HttpClient()
+ * val response = client.request {
+ *     url("https://ktor.io")
+ *     method = HttpMethod.Get
+ * }
+ * ```
+ * This example demonstrates making a GET request to "https://ktor.io".
+ *
+ * ## Note
+ * In addition to this generic [HttpClient.request] method, there are more specific extension functions, such as
+ * [HttpClient.get], [HttpClient.post], [HttpClient.put], and [HttpClient.delete], which are often more
+ * convenient for common HTTP methods.
+ *
+ * @param block The [HttpRequestBuilder] block used to configure request parameters.
+ * Defaults to an empty builder if none is provided.
+ * @return [HttpResponse] The response received from the server after executing the request.
+ *
+ * For more details, see [Making requests](https://ktor.io/docs/request.html).
  */
 public suspend inline fun HttpClient.request(block: HttpRequestBuilder.() -> Unit): HttpResponse =
     request(HttpRequestBuilder().apply(block))
@@ -40,9 +83,31 @@ public suspend inline fun HttpClient.prepareRequest(block: HttpRequestBuilder.()
     prepareRequest(HttpRequestBuilder().apply(block))
 
 /**
- * Executes an [HttpClient]'s request with the [urlString] and the parameters configured in [block].
+ * Executes an HTTP request using the provided [HttpRequestBuilder] configuration.
  *
- * Learn more from [Making requests](https://ktor.io/docs/request.html).
+ * This function sends a request to the [urlString] with parameters specified in the [block], allowing customization
+ * of request settings such as URL, HTTP method, headers, and body.
+ *
+ * ## Usage Example
+ * ```
+ * val client = HttpClient()
+ * val response = client.request("https://ktor.io") {
+ *     method = HttpMethod.Get
+ * }
+ * ```
+ * This example demonstrates making a GET request to "https://ktor.io".
+ *
+ * ## Note
+ * In addition to this generic [HttpClient.request] method, there are more specific extension functions, such as
+ * [HttpClient.get], [HttpClient.post], [HttpClient.put], and [HttpClient.delete], which are often more
+ * convenient for common HTTP methods.
+ *
+ * @param [urlString] The URL to which the request is sent.
+ * @param [block] The [HttpRequestBuilder] used to configure request parameters. Defaults to an empty
+ * builder if none is provided.
+ * @return [HttpResponse] The response received from the server after executing the request.
+ *
+ * For more details, see [Making requests](https://ktor.io/docs/request.html).
  */
 public suspend inline fun HttpClient.request(
     urlString: String,
@@ -64,9 +129,31 @@ public suspend inline fun HttpClient.prepareRequest(
 }
 
 /**
- * Executes an [HttpClient]'s request with the [url] and the parameters configured in [block].
+ * Executes an HTTP request using the provided [HttpRequestBuilder] configuration.
  *
- * Learn more from [Making requests](https://ktor.io/docs/request.html).
+ * This function sends a request to [url] with parameters specified in the [block], allowing customization
+ * of request settings such as URL, HTTP method, headers, and body.
+ *
+ * ## Usage Example
+ * ```
+ * val client = HttpClient()
+ * val response = client.request("https://ktor.io") {
+ *     method = HttpMethod.Get
+ * }
+ * ```
+ * This example demonstrates making a GET request to "https://ktor.io".
+ *
+ * ## Note
+ * In addition to this generic [HttpClient.request] method, there are more specific extension functions, such as
+ * [HttpClient.get], [HttpClient.post], [HttpClient.put], and [HttpClient.delete], which are often more
+ * convenient for common HTTP methods.
+ *
+ * @param [url] The URL to which the request is sent.
+ * @param [block] The [HttpRequestBuilder] used to configure request parameters. Defaults to an empty
+ * builder if none is provided.
+ * @return [HttpResponse] The response received from the server after executing the request.
+ *
+ * For more details, see [Making requests](https://ktor.io/docs/request.html).
  */
 public suspend inline fun HttpClient.request(
     url: Url,
@@ -326,7 +413,10 @@ public fun request(block: HttpRequestBuilder.() -> Unit): HttpRequestBuilder =
 public suspend inline fun HttpClient.get(
     urlString: String,
     block: HttpRequestBuilder.() -> Unit = {}
-): HttpResponse = get { url(urlString); block() }
+): HttpResponse = get {
+    url(urlString)
+    block()
+}
 
 /**
  * Executes an [HttpClient]'s POST request with the specified [url] and
@@ -337,7 +427,10 @@ public suspend inline fun HttpClient.get(
 public suspend inline fun HttpClient.post(
     urlString: String,
     block: HttpRequestBuilder.() -> Unit = {}
-): HttpResponse = post { url(urlString); block() }
+): HttpResponse = post {
+    url(urlString)
+    block()
+}
 
 /**
  * Executes an [HttpClient]'s PUT request with the specified [url] and
@@ -348,7 +441,10 @@ public suspend inline fun HttpClient.post(
 public suspend inline fun HttpClient.put(
     urlString: String,
     block: HttpRequestBuilder.() -> Unit = {}
-): HttpResponse = put { url(urlString); block() }
+): HttpResponse = put {
+    url(urlString)
+    block()
+}
 
 /**
  * Executes an [HttpClient]'s DELETE request with the specified [url] and
@@ -359,7 +455,10 @@ public suspend inline fun HttpClient.put(
 public suspend inline fun HttpClient.delete(
     urlString: String,
     block: HttpRequestBuilder.() -> Unit = {}
-): HttpResponse = delete { url(urlString); block() }
+): HttpResponse = delete {
+    url(urlString)
+    block()
+}
 
 /**
  * Executes an [HttpClient]'s OPTIONS request with the specified [url] and
@@ -370,7 +469,10 @@ public suspend inline fun HttpClient.delete(
 public suspend inline fun HttpClient.options(
     urlString: String,
     block: HttpRequestBuilder.() -> Unit = {}
-): HttpResponse = options { url(urlString); block() }
+): HttpResponse = options {
+    url(urlString)
+    block()
+}
 
 /**
  * Executes an [HttpClient]'s PATCH request with the specified [url] and
@@ -381,7 +483,10 @@ public suspend inline fun HttpClient.options(
 public suspend inline fun HttpClient.patch(
     urlString: String,
     block: HttpRequestBuilder.() -> Unit = {}
-): HttpResponse = patch { url(urlString); block() }
+): HttpResponse = patch {
+    url(urlString)
+    block()
+}
 
 /**
  * Executes an [HttpClient]'s HEAD request with the specified [url] and
@@ -392,7 +497,10 @@ public suspend inline fun HttpClient.patch(
 public suspend inline fun HttpClient.head(
     urlString: String,
     block: HttpRequestBuilder.() -> Unit = {}
-): HttpResponse = head { url(urlString); block() }
+): HttpResponse = head {
+    url(urlString)
+    block()
+}
 
 /**
  * Prepares an [HttpClient]'s GET request with the specified [url] and
@@ -401,7 +509,10 @@ public suspend inline fun HttpClient.head(
 public suspend inline fun HttpClient.prepareGet(
     urlString: String,
     block: HttpRequestBuilder.() -> Unit = {}
-): HttpStatement = prepareGet { url(urlString); block() }
+): HttpStatement = prepareGet {
+    url(urlString)
+    block()
+}
 
 /**
  * Prepares an [HttpClient]'s POST request with the specified [url] and
@@ -410,7 +521,10 @@ public suspend inline fun HttpClient.prepareGet(
 public suspend inline fun HttpClient.preparePost(
     urlString: String,
     block: HttpRequestBuilder.() -> Unit = {}
-): HttpStatement = preparePost { url(urlString); block() }
+): HttpStatement = preparePost {
+    url(urlString)
+    block()
+}
 
 /**
  * Prepares an [HttpClient]'s PUT request with the specified [url] and
@@ -419,7 +533,10 @@ public suspend inline fun HttpClient.preparePost(
 public suspend inline fun HttpClient.preparePut(
     urlString: String,
     block: HttpRequestBuilder.() -> Unit = {}
-): HttpStatement = preparePut { url(urlString); block() }
+): HttpStatement = preparePut {
+    url(urlString)
+    block()
+}
 
 /**
  * Prepares an [HttpClient]'s DELETE request with the specified [url] and
@@ -428,7 +545,10 @@ public suspend inline fun HttpClient.preparePut(
 public suspend inline fun HttpClient.prepareDelete(
     urlString: String,
     block: HttpRequestBuilder.() -> Unit = {}
-): HttpStatement = prepareDelete { url(urlString); block() }
+): HttpStatement = prepareDelete {
+    url(urlString)
+    block()
+}
 
 /**
  * Prepares an [HttpClient]'s OPTIONS request with the specified [url] and
@@ -437,7 +557,10 @@ public suspend inline fun HttpClient.prepareDelete(
 public suspend inline fun HttpClient.prepareOptions(
     urlString: String,
     block: HttpRequestBuilder.() -> Unit = {}
-): HttpStatement = prepareOptions { url(urlString); block() }
+): HttpStatement = prepareOptions {
+    url(urlString)
+    block()
+}
 
 /**
  * Prepares an [HttpClient]'s PATCH request with the specified [url] and
@@ -446,7 +569,10 @@ public suspend inline fun HttpClient.prepareOptions(
 public suspend inline fun HttpClient.preparePatch(
     urlString: String,
     block: HttpRequestBuilder.() -> Unit = {}
-): HttpStatement = preparePatch { url(urlString); block() }
+): HttpStatement = preparePatch {
+    url(urlString)
+    block()
+}
 
 /**
  * Prepares an [HttpClient]'s HEAD request with the specified [url] and
@@ -455,4 +581,7 @@ public suspend inline fun HttpClient.preparePatch(
 public suspend inline fun HttpClient.prepareHead(
     urlString: String,
     block: HttpRequestBuilder.() -> Unit = {}
-): HttpStatement = prepareHead { url(urlString); block() }
+): HttpStatement = prepareHead {
+    url(urlString)
+    block()
+}

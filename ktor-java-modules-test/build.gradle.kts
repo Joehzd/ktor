@@ -9,12 +9,16 @@ plugins {
 description = "Internal module for checking JPMS compliance"
 
 val generateModuleInfo = tasks.register("generateModuleInfo") {
-    doLast {
-        val modules = rootProject.subprojects
-            .filter { it.hasJavaModule }
-            .map { it.javaModuleName() }
+    val modules = rootProject.subprojects
+        .filter { it.hasJavaModule }
+        .map { it.javaModuleName() }
+    inputs.property("modules", modules)
 
-        File(projectDir.absolutePath + "/src/main/java/module-info.java")
+    val moduleInfoFile = layout.projectDirectory.file("src/main/java/module-info.java")
+    outputs.file(moduleInfoFile)
+
+    doLast {
+        moduleInfoFile.asFile
             .apply {
                 parentFile.mkdirs()
                 createNewFile()
@@ -29,28 +33,25 @@ val generateModuleInfo = tasks.register("generateModuleInfo") {
 
 tasks.named<JavaCompile>("compileJava") {
     dependsOn(generateModuleInfo)
+
+    val emptyClasspath = objects.fileCollection()
     doFirst {
         options.compilerArgs.addAll(listOf("--module-path", classpath.asPath))
-        classpath = files()
+        classpath = emptyClasspath
     }
 }
+
+// Here should be specified the latest LTS version
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
 dependencies {
     rootProject.subprojects
         .filter { it.hasJavaModule }
-        .map {
-            generateSequence(it) { it.parent }
-                .toList()
-                .dropLast(1)
-                .reversed()
-                .joinToString(":", prefix = ":") { it.name }
-        }
-        .forEach { api(project(it)) }
+        .forEach { implementation(project(it.path)) }
 }
 
 internal val Project.hasJavaModule: Boolean
