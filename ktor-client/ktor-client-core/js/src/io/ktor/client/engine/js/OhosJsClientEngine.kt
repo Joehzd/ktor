@@ -157,15 +157,15 @@ internal class OhosJsClientEngine(
         })
 
         on("error", callback = { err: Error ->
-            continuation.resumeWithException(WebSocketException(err.message ?: ""))
+//            continuation.resumeWithException(WebSocketException(err.message ?: ""))
         })
 
         continuation.invokeOnCancellation {
             off("open", callback = { result ->
-                continuation.resume(this@awaitConnection)
+//                continuation.resume(this@awaitConnection)
             })
             off("error", callback = { err: Error ->
-                continuation.resumeWithException(WebSocketException(err.message ?: ""))
+//                continuation.resumeWithException(WebSocketException(err.message ?: ""))
             })
 
             if (it != null) {
