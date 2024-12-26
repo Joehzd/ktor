@@ -153,19 +153,23 @@ internal class OhosJsClientEngine(
     private suspend fun WebSocket.WebSocket.awaitConnection() = suspendCancellableCoroutine { continuation ->
         if (continuation.isCancelled) return@suspendCancellableCoroutine
         on("open", callback = { result ->
+            if (continuation.isCancelled) return@callback
             continuation.resume(this@awaitConnection)
         })
 
         on("error", callback = { err: Error ->
-//            continuation.resumeWithException(WebSocketException(err.message ?: ""))
+            if (continuation.isCancelled) return@callback
+            continuation.resumeWithException(WebSocketException(err.message ?: ""))
         })
 
         continuation.invokeOnCancellation {
             off("open", callback = { result ->
-//                continuation.resume(this@awaitConnection)
+                if (continuation.isCancelled) return@callback
+                continuation.resume(this@awaitConnection)
             })
             off("error", callback = { err: Error ->
-//                continuation.resumeWithException(WebSocketException(err.message ?: ""))
+                if (continuation.isCancelled) return@callback
+                continuation.resumeWithException(WebSocketException(err.message ?: ""))
             })
 
             if (it != null) {
