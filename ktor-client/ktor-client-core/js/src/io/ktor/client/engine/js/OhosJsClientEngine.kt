@@ -75,7 +75,27 @@ internal class OhosJsClientEngine(
             expectDataType = Http.HttpDataType.ARRAY_BUFFER
         }
 
-        val response = httpRequest.request(data.url.toString(), options).await()
+        val response = httpRequest.request(data.url.toString(), options).then(onFulfilled = {
+            it
+        }, onRejected = {
+            println("收到异常：${it.message?:it.cause?.message?:"华为网络请求失败"}")
+            val jsHeaders = js("({})")
+            jsHeaders["Content-Type"] = "application/json"
+            object :Http.HttpResponse {
+                override val result: dynamic
+                    // {"error_type":"throw","message":"华为网络请求失败","detail":"华为网络请求失败"}
+                    // it.message?:it.cause?.message?:"华为网络请求失败"
+                    get() = "{\"error_type\":\"throw\",\"message\":\"${it.message?:it.cause?.message?:"华为网络请求失败"}\",\"detail\":\"\"}"
+                override val resultType: Http._HttpDataType
+                    get() = Http._HttpDataType
+                override val responseCode: Int
+                    get() = -1
+                override val header: Any
+                    get() = jsHeaders
+                override val cookies: String
+                    get() = ""
+            }
+        }).await()
 
         val responseChannel = writer {
             when (val result = response.result as Any) {
@@ -107,6 +127,9 @@ internal class OhosJsClientEngine(
                     // todo hzd  cookie 需要单独处理
                     append(key.toString(), value.toString())
                 }
+                if (isEmpty()){
+                    append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                }
             },
             HttpProtocolVersion.HTTP_1_1,
             responseChannel,
@@ -126,16 +149,18 @@ internal class OhosJsClientEngine(
         options.apply {
             header = request.headers
         }
-        socket.connect(url = urlString, options = options)
         val session = OhosJsWebSocketSession(callContext, socket)
-
-        try {
-            socket.awaitConnection()
-        } catch (cause: Throwable) {
-            callContext.cancel(kotlinx.coroutines.CancellationException("Failed to connect to $urlString", cause))
-            throw cause
+        val connect = socket.connect(url = urlString, options = options).await()
+        if (connect) {
+            try {
+                socket.awaitConnection()
+            } catch (cause: Throwable) {
+                callContext.cancel(kotlinx.coroutines.CancellationException("Failed to connect to $urlString", cause))
+                throw cause
+            }
+        } else {
+            callContext.cancel(kotlinx.coroutines.CancellationException("Failed to connect to $urlString"))
         }
-
         return HttpResponseData(
             HttpStatusCode.SwitchingProtocols,
             requestTime,
@@ -153,24 +178,23 @@ internal class OhosJsClientEngine(
     private suspend fun WebSocket.WebSocket.awaitConnection() = suspendCancellableCoroutine { continuation ->
         if (continuation.isCancelled) return@suspendCancellableCoroutine
         on("open", callback = { result ->
-            if (continuation.isCancelled) return@on
             continuation.resume(this@awaitConnection)
         })
 
-        on("error", callback = { err: Error ->
-            if (continuation.isCancelled) return@on
-            continuation.resumeWithException(WebSocketException(err.message ?: ""))
-        })
+//        on("error", callback = { err: Error ->
+//            if (continuation.isCancelled) return@on
+//            continuation.resumeWithException(WebSocketException(err.message ?: ""))
+//        })
 
         continuation.invokeOnCancellation {
             off("open", callback = { result ->
-                if (continuation.isCancelled) return@off
+                if (continuation.isCancelled || continuation.isActive || continuation.isCompleted) return@off
                 continuation.resume(this@awaitConnection)
             })
-            off("error", callback = { err: Error ->
-                if (continuation.isCancelled) return@off
-                continuation.resumeWithException(WebSocketException(err.message ?: ""))
-            })
+//            off("error", callback = { err: Error ->
+//                if (continuation.isCancelled || continuation.isActive || continuation.isCompleted) return@off
+//                continuation.resumeWithException(WebSocketException(err.message ?: ""))
+//            })
 
             if (it != null) {
                 this@awaitConnection.close(null)

@@ -422,7 +422,7 @@ internal external class Http {
          * @crossplatform
          * @since 10
          */
-        fun request(url: String, options: HttpRequestOptions, callback: AsyncCallback<HttpResponse>)
+        fun request(url: String, options: HttpRequestOptions, callback: (BusinessError,HttpResponse)->Unit)
         /**
          * Initiates an HTTP request to a given URL.
          * @permission ohos.permission.INTERNET

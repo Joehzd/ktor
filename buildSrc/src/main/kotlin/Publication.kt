@@ -83,7 +83,8 @@ fun Project.configurePublication() {
     val publishingPassword: String? = System.getenv("PUBLISHING_PASSWORD")
 
     val repositoryId: String? = System.getenv("REPOSITORY_ID")
-    val publishingUrl: String? = "http://192.168.202.222:8081/repository/kimi-android/"
+    val publishingUrl: String = "http://192.168.202.222:8081/repository/kimi-android/"
+    val publishingSnapshotsUrl: String = "http://192.168.202.222:8081/repository/maven-snapshots/"
 
     val publishLocal: Boolean by rootProject.extra
     val globalM2: String by rootProject.extra
@@ -190,10 +191,10 @@ private fun Project.configureSigning() {
 
     apply(plugin = "signing")
 
-    signing {
-        useGpgCmd()
-        sign(publishing.publications)
-    }
+//    signing {
+//        useGpgCmd()
+//        sign(publishing.publications)
+//    }
 
     val gpgAgentLock: ReentrantLock by rootProject.extra { ReentrantLock() }
 

@@ -922,7 +922,7 @@ internal external class WebSocket {
              * @atomicservice
              * @since 11
              */
-            fun on(type: String/*'error'*/, callback: (Error)->Unit)
+            fun on(type: String/*'error'*/, callback: (BusinessError)->Unit)
 
             /**
              * Cancels listening for the error events of a WebSocket connection.
