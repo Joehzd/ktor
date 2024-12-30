@@ -8,7 +8,6 @@ import com.kanyun.kotlin.ktor.ohos.api.Http
 import io.ktor.client.engine.CLIENT_CONFIG
 import io.ktor.client.engine.HttpClientEngineBase
 import io.ktor.client.engine.callContext
-import io.ktor.client.engine.js.ohos.*
 import io.ktor.client.engine.js.ohos.WebSocket
 import io.ktor.client.engine.js.ohos.WebSocket.Companion.createWebSocket
 import io.ktor.client.engine.mergeHeaders
@@ -19,7 +18,6 @@ import io.ktor.client.request.*
 import io.ktor.client.utils.buildHeaders
 import io.ktor.http.*
 import io.ktor.http.content.*
-import io.ktor.util.*
 import io.ktor.util.date.GMTDate
 import io.ktor.utils.io.*
 import io.ktor.utils.io.core.toByteArray
@@ -27,7 +25,6 @@ import kotlinx.coroutines.*
 import kotlinx.io.*
 import org.khronos.webgl.ArrayBuffer
 import org.khronos.webgl.Uint8Array
-import org.w3c.dom.events.*
 import kotlin.coroutines.*
 
 internal class OhosJsClientEngine(
@@ -59,11 +56,27 @@ internal class OhosJsClientEngine(
             println("body 没有写入之前: data:${data},headers:${data.headers}")
             val bodyBytes = when (val content = data.body) {
                 is OutgoingContent.ByteArrayContent -> content.bytes()
-                is OutgoingContent.ReadChannelContent -> content.readFrom().readRemaining().readByteArray()
+                is OutgoingContent.ReadChannelContent -> {
+                    // 返回 ByteReadChannel
+                    val readChannel = content.readFrom()
+                    // 这里 readRemaining() 会一直等到 channel 被写完或 close()
+                    val byteArray = readChannel.readRemaining().readByteArray()
+                    println("body 实际读入 ${byteArray.size}")
+                    byteArray
+                }
+
                 is OutgoingContent.WriteChannelContent -> {
-                    GlobalScope.writer(callContext) {
+                    CoroutineScope(callContext).writer(callContext) {
                         content.writeTo(channel)
                     }.channel.readRemaining().readByteArray()
+                    // 1. 启动一个协程写数据
+                    val writerJob = CoroutineScope(callContext).writer(callContext) {
+                        content.writeTo(channel)
+                    }
+                    // 2. 等待写协程完成后，再读出 ByteArray
+                    val writtenChannel = writerJob.channel
+                    // 3. 等写完后，统一读到 byteArray 中
+                    writtenChannel.readRemaining().readByteArray()
                 }
 
                 else -> null
@@ -71,21 +84,21 @@ internal class OhosJsClientEngine(
             bodyBytes?.let { extraData = Uint8Array(it.toTypedArray()).buffer }
             connectTimeout = config.connectTimeout
             readTimeout = config.readTimeout
-            usingProtocol = Http.HttpProtocol.HTTP1_1
+            usingProtocol = Http.HttpProtocol.HTTP2
             expectDataType = Http.HttpDataType.ARRAY_BUFFER
         }
 
         val response = httpRequest.request(data.url.toString(), options).then(onFulfilled = {
             it
         }, onRejected = {
-            println("收到异常：${it.message?:it.cause?.message?:"华为网络请求失败"}")
+            println("收到异常：${it.message ?: it.cause?.message ?: "华为网络请求失败"}")
             val jsHeaders = js("({})")
             jsHeaders["Content-Type"] = "application/json"
-            object :Http.HttpResponse {
+            object : Http.HttpResponse {
                 override val result: dynamic
                     // {"error_type":"throw","message":"华为网络请求失败","detail":"华为网络请求失败"}
                     // it.message?:it.cause?.message?:"华为网络请求失败"
-                    get() = "{\"error_type\":\"throw\",\"message\":\"${it.message?:it.cause?.message?:"华为网络请求失败"}\",\"detail\":\"\"}"
+                    get() = "{\"error_type\":\"throw\",\"message\":\"${it.message ?: it.cause?.message ?: "华为网络请求失败"}\",\"detail\":\"\"}"
                 override val resultType: Http._HttpDataType
                     get() = Http._HttpDataType
                 override val responseCode: Int
@@ -96,7 +109,6 @@ internal class OhosJsClientEngine(
                     get() = ""
             }
         }).await()
-
         val responseChannel = writer {
             when (val result = response.result as Any) {
                 is String -> {
@@ -110,31 +122,45 @@ internal class OhosJsClientEngine(
                     channel.flush()
                 }
 
-                else -> {}
+                else -> {
+                    channel.writeFully("".toByteArray())
+                    channel.flush()
+                }
             }
         }.channel
-
         httpRequest.destroy()
-
-        return HttpResponseData(
-            HttpStatusCode(response.responseCode, ""),
-            requestTime,
-            buildHeaders {
-                for (entry in js("Object").entries(response.header)) {
-                    val key = entry[0]
-                    val value = entry[1]
-                    println("key ${key.toString()} -- value ：${value.toString()}")
-                    // todo hzd  cookie 需要单独处理
-                    append(key.toString(), value.toString())
-                }
-                if (isEmpty()){
+        if (response.responseCode == 200 && data.method == HttpMethod.Put) {
+            return HttpResponseData(
+                HttpStatusCode(response.responseCode, ""),
+                requestTime,
+                buildHeaders {
                     append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                }
-            },
-            HttpProtocolVersion.HTTP_1_1,
-            responseChannel,
-            callContext
-        )
+                },
+                HttpProtocolVersion.HTTP_1_1,
+                "{}",
+                callContext
+            )
+        } else {
+            return HttpResponseData(
+                HttpStatusCode(response.responseCode, ""),
+                requestTime,
+                buildHeaders {
+                    for (entry in js("Object").entries(response.header)) {
+                        val key = entry[0]
+                        val value = entry[1]
+                        println("key ${key.toString()} -- value ：${value.toString()}")
+                        // todo hzd  cookie 需要单独处理
+                        append(key.toString(), value.toString())
+                    }
+                    if (isEmpty()) {
+                        append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                    }
+                },
+                HttpProtocolVersion.HTTP_1_1,
+                responseChannel,
+                callContext
+            )
+        }
     }
 
     private suspend fun executeWebSocketRequest(
@@ -181,21 +207,11 @@ internal class OhosJsClientEngine(
             continuation.resume(this@awaitConnection)
         })
 
-//        on("error", callback = { err: Error ->
-//            if (continuation.isCancelled) return@on
-//            continuation.resumeWithException(WebSocketException(err.message ?: ""))
-//        })
-
         continuation.invokeOnCancellation {
             off("open", callback = { result ->
                 if (continuation.isCancelled || continuation.isActive || continuation.isCompleted) return@off
                 continuation.resume(this@awaitConnection)
             })
-//            off("error", callback = { err: Error ->
-//                if (continuation.isCancelled || continuation.isActive || continuation.isCompleted) return@off
-//                continuation.resumeWithException(WebSocketException(err.message ?: ""))
-//            })
-
             if (it != null) {
                 this@awaitConnection.close(null)
             }
