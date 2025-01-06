@@ -8,6 +8,8 @@ import com.kanyun.kotlin.ktor.ohos.api.Http
 import io.ktor.client.engine.CLIENT_CONFIG
 import io.ktor.client.engine.HttpClientEngineBase
 import io.ktor.client.engine.callContext
+import io.ktor.client.engine.js.ohos.*
+import io.ktor.client.engine.js.ohos.BusinessError
 import io.ktor.client.engine.js.ohos.WebSocket
 import io.ktor.client.engine.js.ohos.WebSocket.Companion.createWebSocket
 import io.ktor.client.engine.mergeHeaders
@@ -91,7 +93,7 @@ internal class OhosJsClientEngine(
         val response = httpRequest.request(data.url.toString(), options).then(onFulfilled = {
             it
         }, onRejected = {
-            println("收到异常：${it.message ?: it.cause?.message ?: "华为网络请求失败"}")
+            println("收到异常：${data.url} -- ${it.message ?: it.cause?.message ?: "华为网络请求失败"}")
             val jsHeaders = js("({})")
             jsHeaders["Content-Type"] = "application/json"
             object : Http.HttpResponse {
@@ -102,13 +104,14 @@ internal class OhosJsClientEngine(
                 override val resultType: Http._HttpDataType
                     get() = Http._HttpDataType
                 override val responseCode: Int
-                    get() = -1
+                    get() = 400
                 override val header: Any
                     get() = jsHeaders
                 override val cookies: String
                     get() = ""
             }
         }).await()
+        println("response 数据111111")
         val responseChannel = writer {
             when (val result = response.result as Any) {
                 is String -> {
@@ -129,7 +132,18 @@ internal class OhosJsClientEngine(
             }
         }.channel
         httpRequest.destroy()
-        if (response.responseCode == 200 && data.method == HttpMethod.Put) {
+
+        var hasContentLength = true
+        for (entry in js("Object").entries(response.header)) {
+            val key = entry[0]
+            val value = entry[1]
+            if (key.toString().equals("Content-Length", ignoreCase = true) && value.toString().toInt() == 0) {
+                hasContentLength = false
+                break
+            }
+        }
+        // 如果是 PUT 请求，且返回码是 200，且 header 中有的 Content length 为 0，那么返回一个空的 HttpResponseData
+        if (response.responseCode == 200 && data.method == HttpMethod.Put && !hasContentLength) {
             return HttpResponseData(
                 HttpStatusCode(response.responseCode, ""),
                 requestTime,
@@ -176,7 +190,10 @@ internal class OhosJsClientEngine(
             header = request.headers
         }
         val session = OhosJsWebSocketSession(callContext, socket)
-        val connect = socket.connect(url = urlString, options = options).await()
+        val connect = socket.connect(url = urlString, options = options).catch {
+            println("WebSocket 连接失败：${it.message}")
+            false
+        }.await()
         if (connect) {
             try {
                 socket.awaitConnection()
@@ -185,7 +202,9 @@ internal class OhosJsClientEngine(
                 throw cause
             }
         } else {
-            callContext.cancel(kotlinx.coroutines.CancellationException("Failed to connect to $urlString"))
+            val exception = kotlinx.coroutines.CancellationException("Failed to connect to $urlString")
+            callContext.cancel(exception)
+            throw exception
         }
         return HttpResponseData(
             HttpStatusCode.SwitchingProtocols,
@@ -203,7 +222,7 @@ internal class OhosJsClientEngine(
 
     private suspend fun WebSocket.WebSocket.awaitConnection() = suspendCancellableCoroutine { continuation ->
         if (continuation.isCancelled) return@suspendCancellableCoroutine
-        on("open", callback = { result ->
+        on("open", callback = { err: BusinessError, data: Any ->
             continuation.resume(this@awaitConnection)
         })
 

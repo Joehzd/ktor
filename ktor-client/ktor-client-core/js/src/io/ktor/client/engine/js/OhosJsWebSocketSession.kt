@@ -75,8 +75,7 @@ internal class OhosJsWebSocketSession(
         websocket.on(
             "error",
             callback = { err: BusinessError ->
-                println("WebSocket 接收到错误: ${err.code}, ${err.data}")
-                val cause = WebSocketException(message = "${err.message}", cause = err)
+                val cause = WebSocketException(message = "Websocket Error", cause = err)
                 _closeReason.completeExceptionally(cause)
                 _incoming.close(cause)
                 _outgoing.cancel()
