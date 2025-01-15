@@ -111,7 +111,6 @@ internal class OhosJsClientEngine(
                     get() = ""
             }
         }).await()
-        println("response 数据111111")
         val responseChannel = writer {
             when (val result = response.result as Any) {
                 is String -> {
