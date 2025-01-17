@@ -19,6 +19,6 @@ public class OhosHttpClientEngineConfig: HttpClientEngineConfig() {
      *
      * Set this value to `0` to use an infinite timeout.
      */
-    public var readTimeout: Int = 30_000
+    public var readTimeout: Int = 100_000
 
 }
