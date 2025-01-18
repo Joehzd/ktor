@@ -8,7 +8,6 @@ import com.kanyun.kotlin.ktor.ohos.api.Http
 import io.ktor.client.engine.CLIENT_CONFIG
 import io.ktor.client.engine.HttpClientEngineBase
 import io.ktor.client.engine.callContext
-import io.ktor.client.engine.js.ohos.*
 import io.ktor.client.engine.js.ohos.BusinessError
 import io.ktor.client.engine.js.ohos.WebSocket
 import io.ktor.client.engine.js.ohos.WebSocket.Companion.createWebSocket
@@ -20,14 +19,18 @@ import io.ktor.client.request.*
 import io.ktor.client.utils.buildHeaders
 import io.ktor.http.*
 import io.ktor.http.content.*
-import io.ktor.util.date.GMTDate
+import io.ktor.util.*
+import io.ktor.util.date.*
 import io.ktor.utils.io.*
-import io.ktor.utils.io.core.toByteArray
+import io.ktor.utils.io.core.*
 import kotlinx.coroutines.*
 import kotlinx.io.*
 import org.khronos.webgl.ArrayBuffer
+import org.khronos.webgl.Int8Array
 import org.khronos.webgl.Uint8Array
+import org.khronos.webgl.set
 import kotlin.coroutines.*
+import kotlin.random.Random
 
 internal class OhosJsClientEngine(
     override val config: OhosHttpClientEngineConfig
@@ -56,15 +59,17 @@ internal class OhosJsClientEngine(
             }
             header = jsHeaders
             println("body 没有写入之前: data:${data},headers:${data.headers}")
-            val bodyBytes = when (val content = data.body) {
-                is OutgoingContent.ByteArrayContent -> content.bytes()
+            when (val content = data.body) {
+                is OutgoingContent.ByteArrayContent -> {
+                    extraData = content.bytes().toJsArray().buffer
+                }
                 is OutgoingContent.ReadChannelContent -> {
                     // 返回 ByteReadChannel
                     val readChannel = content.readFrom()
                     // 这里 readRemaining() 会一直等到 channel 被写完或 close()
                     val byteArray = readChannel.readRemaining().readByteArray()
                     println("body 实际读入 ${byteArray.size}")
-                    byteArray
+                    extraData = byteArray.toJsArray().buffer
                 }
 
                 is OutgoingContent.WriteChannelContent -> {
@@ -78,12 +83,10 @@ internal class OhosJsClientEngine(
                     // 2. 等待写协程完成后，再读出 ByteArray
                     val writtenChannel = writerJob.channel
                     // 3. 等写完后，统一读到 byteArray 中
-                    writtenChannel.readRemaining().readByteArray()
+                    extraData = writtenChannel.readRemaining().readByteArray().toJsArray().buffer
                 }
-
-                else -> null
+                else -> {}
             }
-            bodyBytes?.let { extraData = Uint8Array(it.toTypedArray()).buffer }
             connectTimeout = config.connectTimeout
             readTimeout = config.readTimeout
             usingProtocol = Http.HttpProtocol.HTTP2
