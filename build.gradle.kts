@@ -42,9 +42,6 @@ println("Build version: ${project.version}")
 
 subprojects {
     apply(plugin = "ktorbuild.base")
-    group = "com.moonshot.ktor"
-    version = configuredVersion
-
 
     extra["hostManager"] = HostManager()
 

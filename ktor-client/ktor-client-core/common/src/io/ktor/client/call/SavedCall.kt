@@ -47,8 +47,8 @@ internal class SavedHttpCall(
     init {
         this.request = SavedHttpRequest(this, request)
         this.response = SavedHttpResponse(this, responseBody, response)
-
-        checkContentLength(response.contentLength(), responseBody.size.toLong(), request.method)
+        // don't check content length
+//        checkContentLength(response.contentLength(), responseBody.size.toLong(), request.method)
     }
 
     /**
