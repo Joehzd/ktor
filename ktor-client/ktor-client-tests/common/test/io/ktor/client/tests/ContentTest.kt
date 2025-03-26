@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2019 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ * Copyright 2014-2025 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
  */
 
 package io.ktor.client.tests
@@ -11,6 +11,7 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
+import io.ktor.client.test.base.*
 import io.ktor.client.tests.utils.*
 import io.ktor.client.utils.*
 import io.ktor.http.*
@@ -43,7 +44,7 @@ val testArrays = testSize.map {
     makeArray(it)
 }
 
-class ContentTest : ClientLoader(timeout = 5.minutes) {
+class ContentTest : ClientLoader() {
 
     @Test
     fun testGetFormData() = clientTests {
@@ -99,7 +100,7 @@ class ContentTest : ClientLoader(timeout = 5.minutes) {
     }
 
     @Test
-    fun testSendByteReadChannel() = clientTests(listOf("Js")) {
+    fun testSendByteReadChannel() = clientTests(except("Js")) {
         config {
             install(HttpTimeout) {
                 socketTimeoutMillis = 1.minutes.inWholeMilliseconds
@@ -120,7 +121,7 @@ class ContentTest : ClientLoader(timeout = 5.minutes) {
     }
 
     @Test
-    fun testSendByteWriteChannel() = clientTests(listOf("Js")) {
+    fun testSendByteWriteChannel() = clientTests(except("Js")) {
         config {
             install(HttpTimeout) {
                 socketTimeoutMillis = 1.minutes.inWholeMilliseconds
@@ -146,7 +147,7 @@ class ContentTest : ClientLoader(timeout = 5.minutes) {
     }
 
     @Test
-    fun testString() = clientTests(listOf("Darwin", "CIO", "DarwinLegacy"), retries = 10) {
+    fun testString() = clientTests(except("Darwin", "CIO", "DarwinLegacy"), retries = 10) {
         test { client ->
             testStrings.forEach { content ->
                 val requestWithBody = client.echo<String>(content)
@@ -176,7 +177,7 @@ class ContentTest : ClientLoader(timeout = 5.minutes) {
     }
 
     @Test
-    fun testTextContent() = clientTests(listOf("Darwin", "CIO", "DarwinLegacy")) {
+    fun testTextContent() = clientTests(except("Darwin", "CIO", "DarwinLegacy")) {
         test { client ->
             testStrings.forEach { content ->
                 val response = client.echo<String>(TextContent(content, ContentType.Text.Plain))
@@ -348,7 +349,7 @@ class ContentTest : ClientLoader(timeout = 5.minutes) {
     }
 
     @Test
-    fun testDownloadStreamResponseWithClose() = clientTests(onlyWithEngine = "CIO") {
+    fun testDownloadStreamResponseWithClose() = clientTests(only("CIO")) {
         test { client ->
             client.prepareGet("$TEST_SERVER/content/stream").execute {
             }
@@ -357,7 +358,7 @@ class ContentTest : ClientLoader(timeout = 5.minutes) {
 
     // NSUrlSession buffers first 512 bytes
     @Test
-    fun testDownloadStream() = clientTests(listOf("Darwin", "DarwinLegacy")) {
+    fun testDownloadStream() = clientTests(except("Darwin", "DarwinLegacy")) {
         test { client ->
             client.prepareGet("$TEST_SERVER/content/stream?delay=100").execute {
                 val channel = it.bodyAsChannel()
@@ -393,6 +394,8 @@ class ContentTest : ClientLoader(timeout = 5.minutes) {
     /**
      * This is a bit of an edge case where the initial content reader fails to read the response body
      * before a second reader comes in. When this happens, we simply cancel the initial reader.
+     *
+     * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.client.tests.ContentTest.testSaveBody)
      */
     @OptIn(InternalAPI::class)
     @Test

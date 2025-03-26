@@ -1,13 +1,13 @@
 /*
- * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ * Copyright 2014-2025 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
  */
 
 package io.ktor.client.tests.utils
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
-import io.ktor.junit.coroutines.*
 import io.ktor.server.engine.*
+import kotlinx.coroutines.debug.junit5.CoroutinesTimeout
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.slf4j.LoggerFactory

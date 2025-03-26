@@ -83,6 +83,8 @@ actual constructor(
 
     /**
      * Reload application: destroy it first and then create again
+     *
+     * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.server.engine.EmbeddedServer.reload)
      */
     public fun reload() {
         applicationInstanceLock.write {
@@ -100,27 +102,9 @@ actual constructor(
             return@read currentApplication
         }
 
-        val changes = packageWatchKeys.flatMap { it.pollEvents() }
-        if (changes.isEmpty()) {
+        if (getFileChanges().isNullOrEmpty()) {
             return@read currentApplication
         }
-
-        environment.log.info("Changes in application detected.")
-
-        var count = changes.size
-        while (true) {
-            Thread.sleep(200)
-            val moreChanges = packageWatchKeys.flatMap { it.pollEvents() }
-            if (moreChanges.isEmpty()) {
-                break
-            }
-
-            environment.log.debug("Waiting for more changes.")
-            count += moreChanges.size
-        }
-
-        environment.log.debug("Changes to $count files caused application restart.")
-        changes.take(5).forEach { environment.log.debug("...  ${it.context()}") }
 
         applicationInstanceLock.write {
             destroyApplication()
@@ -130,6 +114,39 @@ actual constructor(
         }
 
         return@read applicationInstance ?: error("EmbeddedServer was stopped")
+    }
+
+    private fun getFileChanges(): List<WatchEvent<*>>? {
+        try {
+            val changes = packageWatchKeys.flatMap { it.pollEvents() }
+            if (changes.isEmpty()) {
+                return changes
+            }
+
+            environment.log.info("Changes in application detected.")
+
+            var count = changes.size
+            while (true) {
+                Thread.sleep(200)
+                val moreChanges = packageWatchKeys.flatMap { it.pollEvents() }
+                if (moreChanges.isEmpty()) {
+                    break
+                }
+
+                environment.log.debug("Waiting for more changes.")
+                count += moreChanges.size
+            }
+
+            environment.log.debug("Changes to $count files caused application restart.")
+            changes.take(5).forEach { environment.log.debug("...  {}", it.context()) }
+            return changes
+        } catch (e: InterruptedException) {
+            environment.log.debug("Watch service was interrupted", e)
+            return null
+        } catch (e: ClosedWatchServiceException) {
+            environment.log.debug("Watch service was closed", e)
+            return null
+        }
     }
 
     private fun createApplication(): Pair<Application, ClassLoader> {
@@ -295,6 +312,10 @@ actual constructor(
         return this
     }
 
+    public actual suspend fun startSuspend(wait: Boolean): EmbeddedServer<TEngine, TConfiguration> {
+        return withContext(Dispatchers.IOBridge) { start(wait) }
+    }
+
     public fun stop(shutdownGracePeriod: Long, shutdownTimeout: Long, timeUnit: TimeUnit) {
         try {
             engine.stop(timeUnit.toMillis(shutdownGracePeriod), timeUnit.toMillis(shutdownTimeout))
@@ -311,6 +332,10 @@ actual constructor(
 
     public actual fun stop(gracePeriodMillis: Long, timeoutMillis: Long) {
         stop(gracePeriodMillis, timeoutMillis, TimeUnit.MILLISECONDS)
+    }
+
+    public actual suspend fun stopSuspend(gracePeriodMillis: Long, timeoutMillis: Long) {
+        withContext(Dispatchers.IOBridge) { stop(gracePeriodMillis, timeoutMillis) }
     }
 
     private fun instantiateAndConfigureApplication(currentClassLoader: ClassLoader): Application {
@@ -383,10 +408,7 @@ actual constructor(
     }
 
     private fun cleanupWatcher() {
-        try {
-            watcher?.close()
-        } catch (_: NoClassDefFoundError) {
-        }
+        runCatching { watcher?.close() }
     }
 }
 

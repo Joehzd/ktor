@@ -110,6 +110,8 @@ class UrlTest {
     /**
      * https://tools.ietf.org/html/rfc1738#section-5
      * hsegment = *[ uchar | ";" | ":" | "@" | "&" | "=" ]
+     *
+     * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.tests.http.UrlTest.testPath)
      */
     @Test
     fun testPath() {
@@ -265,6 +267,15 @@ class UrlTest {
     }
 
     @Test
+    fun testForFileProtocolMinimalRepresentation() {
+        val result = Url("file:/var/www")
+        assertEquals("file", result.protocol.name)
+        assertEquals("", result.host)
+        assertEquals(listOf("var", "www"), result.rawSegments)
+        assertEquals("file:///var/www", result.toString())
+    }
+
+    @Test
     fun testForMailProtocol() {
         val expectedUrl = "mailto:abc@xyz.io"
         val resultUrl = Url(expectedUrl)
@@ -364,5 +375,23 @@ class UrlTest {
         assertEquals("localhost", urlHttp.host)
         assertEquals(URLProtocol.HTTP, urlHttp.protocol)
         assertTrue(urlHttp.rawSegments.contains("about"))
+    }
+
+    @Test
+    fun testTelUrl() {
+        val globalTelUrl = Url("tel:+14085555555")
+        assertEquals("tel:+14085555555", globalTelUrl.toString())
+        assertEquals("tel", globalTelUrl.protocol.name)
+        assertEquals("+14085555555", globalTelUrl.host)
+
+        val localTelUrlWithContext = Url("tel:863-1234;phone-context=+1-914-555")
+        assertEquals("tel:863-1234;phone-context=+1-914-555", localTelUrlWithContext.toString())
+        assertEquals("tel", localTelUrlWithContext.protocol.name)
+        assertEquals("863-1234;phone-context=+1-914-555", localTelUrlWithContext.host)
+
+        val telUrlWithParams = Url("tel:+1-408-555-5555;extension=ext;phone-context=context")
+        assertEquals("tel:+1-408-555-5555;extension=ext;phone-context=context", telUrlWithParams.toString())
+        assertEquals("tel", telUrlWithParams.protocol.name)
+        assertEquals("+1-408-555-5555;extension=ext;phone-context=context", telUrlWithParams.host)
     }
 }

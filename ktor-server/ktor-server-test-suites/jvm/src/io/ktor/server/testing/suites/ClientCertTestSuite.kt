@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ * Copyright 2014-2025 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
  */
 
 package io.ktor.server.testing.suites
@@ -8,12 +8,12 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
-import io.ktor.junit.coroutines.*
 import io.ktor.network.tls.*
 import io.ktor.network.tls.certificates.*
 import io.ktor.server.engine.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.debug.junit5.CoroutinesTimeout
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -21,6 +21,8 @@ import kotlin.test.assertEquals
 
 /**
  * This tests uses a CA, which creates server and client certificates.
+ *
+ * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.server.testing.suites.ClientCertTestSuite)
  */
 abstract class ClientCertTestSuite<Engine : ApplicationEngine, Configuration : ApplicationEngine.Configuration>(
     val engine: ApplicationEngineFactory<Engine, Configuration>

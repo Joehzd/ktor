@@ -12,6 +12,8 @@ import kotlin.js.*
 
 /**
  * Generates a nonce string.
+ *
+ * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.util.generateNonce)
  */
 private fun Uint8Array.asByteArray(): ByteArray {
     return Int8Array(buffer, byteOffset, length).asDynamic()
@@ -28,6 +30,8 @@ public actual fun generateNonce(): String {
 
 /**
  * Create [Digest] from specified hash [name].
+ *
+ * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.util.Digest)
  */
 public actual fun Digest(name: String): Digest = object : Digest {
     private val state = mutableListOf<ByteArray>()
@@ -69,5 +73,7 @@ private external class SubtleCrypto {
 
 /**
  * Compute SHA-1 hash for the specified [bytes]
+ *
+ * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.util.sha1)
  */
 public actual fun sha1(bytes: ByteArray): ByteArray = Sha1().digest(bytes)

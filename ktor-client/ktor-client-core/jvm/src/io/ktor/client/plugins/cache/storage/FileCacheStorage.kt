@@ -10,7 +10,6 @@ import io.ktor.util.*
 import io.ktor.util.collections.*
 import io.ktor.util.date.*
 import io.ktor.utils.io.*
-import io.ktor.utils.io.core.*
 import io.ktor.utils.io.jvm.javaio.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.*
@@ -19,6 +18,9 @@ import java.security.*
 
 /**
  * Creates storage that uses file system to store cache data.
+ *
+ * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.client.plugins.cache.storage.FileStorage)
+ *
  * @param directory directory to store cache data.
  * @param dispatcher dispatcher to use for file operations.
  */
@@ -45,7 +47,7 @@ internal class CachingCacheStorage(
         }
         val data = store.getValue(url)
         return data.find {
-            varyKeys.all { (key, value) -> it.varyKeys[key] == value }
+            varyKeys.all { (key, value) -> it.varyKeys[key] == value } && varyKeys.size == it.varyKeys.size
         }
     }
 
@@ -81,7 +83,7 @@ private class FileCacheStorage(
     override suspend fun find(url: Url, varyKeys: Map<String, String>): CachedResponseData? {
         val data = readCache(key(url))
         return data.find {
-            varyKeys.all { (key, value) -> it.varyKeys[key] == value }
+            varyKeys.all { (key, value) -> it.varyKeys[key] == value } && varyKeys.size == it.varyKeys.size
         }
     }
 

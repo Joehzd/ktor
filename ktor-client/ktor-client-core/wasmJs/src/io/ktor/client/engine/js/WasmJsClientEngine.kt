@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2023 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ * Copyright 2014-2025 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
  */
 
 package io.ktor.client.engine.js
@@ -56,13 +56,8 @@ internal class JsClientEngine(
 
         val requestTime = GMTDate()
         val rawRequest = data.toRaw(clientConfig, callContext)
-        val controller = AbortController()
-        rawRequest.signal = controller.signal
-        callContext.job.invokeOnCompletion(onCancelling = true) {
-            controller.abort()
-        }
+        val rawResponse = commonFetch(data.url.toString(), rawRequest, config, callContext.job)
 
-        val rawResponse = commonFetch(data.url.toString(), rawRequest, config)
         val status = HttpStatusCode(rawResponse.status.toInt(), rawResponse.statusText)
         val headers = rawResponse.headers.mapToKtor(data.method, data.attributes)
         val version = HttpProtocolVersion.HTTP_1_1
@@ -87,7 +82,7 @@ internal class JsClientEngine(
         headers: Headers
     ): WebSocket {
         val protocolHeaderNames = headers.names().filter { headerName ->
-            headerName.equals("sec-websocket-protocol", true)
+            headerName.equals(HttpHeaders.SecWebSocketProtocol, ignoreCase = true)
         }
         val protocols = protocolHeaderNames.mapNotNull { headers.getAll(it) }.flatten().toTypedArray()
         return when {
@@ -111,6 +106,7 @@ internal class JsClientEngine(
 
         val urlString = request.url.toString()
         val socket: WebSocket = createWebSocket(urlString, request.headers)
+        val session = JsWebSocketSession(callContext, socket)
 
         try {
             socket.awaitConnection()
@@ -119,12 +115,13 @@ internal class JsClientEngine(
             throw cause
         }
 
-        val session = JsWebSocketSession(callContext, socket)
+        val protocol = socket.protocol.takeIf { it.isNotEmpty() }
+        val headers = if (protocol != null) headersOf(HttpHeaders.SecWebSocketProtocol, protocol) else Headers.Empty
 
         return HttpResponseData(
             HttpStatusCode.SwitchingProtocols,
             requestTime,
-            Headers.Empty,
+            headers,
             HttpProtocolVersion.HTTP_1_1,
             session,
             callContext
@@ -173,11 +170,20 @@ internal fun org.w3c.fetch.Headers.mapToKtor(method: HttpMethod, attributes: Att
         append(key, value)
     }
 
-    dropCompressionHeaders(method, attributes)
+    // Content-Encoding is hidden for cross-origin calls,
+    // so browser requests should always ignore Content-Length
+    dropCompressionHeaders(
+        method,
+        attributes,
+        alwaysRemove = PlatformUtils.IS_BROWSER
+    )
 }
 
 /**
  * Wrapper for javascript `error` objects.
+ *
+ * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.client.engine.js.JsError)
+ *
  * @property origin: fail reason
  */
 @Suppress("MemberVisibilityCanBePrivate")

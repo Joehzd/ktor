@@ -5,23 +5,27 @@
 package io.ktor.server.sessions
 
 import io.ktor.http.*
-import io.ktor.server.sessions.serialization.*
 import io.ktor.util.*
-import kotlinx.serialization.*
-import kotlinx.serialization.json.*
-import java.lang.reflect.*
-import java.math.*
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
+import java.math.BigDecimal
+import java.math.BigInteger
 import java.util.*
-import java.util.concurrent.*
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.*
-import kotlin.reflect.full.*
-import kotlin.reflect.jvm.*
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.full.superclasses
+import kotlin.reflect.jvm.javaType
+import kotlin.reflect.jvm.jvmErasure
 
 private const val TYPE_TOKEN_PARAMETER_NAME: String = "\$type"
 
 /**
  * A reflection-based session serializer. Can be used for backward compatibility with previous versions.
  * A serialized format is textual and optimized for size as it could be transferred via HTTP headers or cookies.
+ *
+ *
+ * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.server.sessions.reflectionSessionSerializer)
  *
  * @property T is a session instance class handled by this serializer
  */
@@ -31,6 +35,9 @@ public inline fun <reified T : Any> reflectionSessionSerializer(): SessionSerial
 /**
  * A reflection-based session serializer. Can be used for backward compatibility with previous versions.
  * A serialized format is textual and optimized for size as it could be transferred via HTTP headers or cookies.
+ *
+ *
+ * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.server.sessions.reflectionSessionSerializer)
  *
  * @property typeInfo is a session instance class handled by this serializer
  */

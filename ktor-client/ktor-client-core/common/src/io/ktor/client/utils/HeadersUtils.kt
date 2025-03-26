@@ -13,12 +13,20 @@ private val DecompressionListAttribute: AttributeKey<MutableList<String>> = Attr
 /**
  * This function should be used for engines which apply decompression but don't drop compression headers
  * (like js and Curl) to make sure all the plugins and checks work with the correct content length and encoding.
+ *
+ * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.client.utils.dropCompressionHeaders)
  */
 @InternalAPI
-public fun HeadersBuilder.dropCompressionHeaders(method: HttpMethod, attributes: Attributes) {
+public fun HeadersBuilder.dropCompressionHeaders(
+    method: HttpMethod,
+    attributes: Attributes,
+    alwaysRemove: Boolean = false,
+) {
     if (method == HttpMethod.Head || method == HttpMethod.Options) return
-    val header = get(HttpHeaders.ContentEncoding) ?: return
-    attributes.computeIfAbsent(DecompressionListAttribute) { mutableListOf<String>() }.add(header)
+    when (val header = get(HttpHeaders.ContentEncoding)) {
+        null -> if (!alwaysRemove) return
+        else -> attributes.computeIfAbsent(DecompressionListAttribute) { mutableListOf<String>() }.add(header)
+    }
     remove(HttpHeaders.ContentEncoding)
     remove(HttpHeaders.ContentLength)
 }

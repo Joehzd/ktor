@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ * Copyright 2014-2025 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
  */
 
 package io.ktor.client.plugins.auth.providers
@@ -14,6 +14,8 @@ import io.ktor.utils.io.*
 
 /**
  * Installs the client's [BearerAuthProvider].
+ *
+ * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.client.plugins.auth.providers.bearer)
  */
 public fun AuthConfig.bearer(block: BearerAuthConfig.() -> Unit) {
     with(BearerAuthConfig().apply(block)) {
@@ -28,6 +30,8 @@ public class BearerTokens(
 
 /**
  * Parameters to be passed to [BearerAuthConfig.refreshTokens] lambda.
+ *
+ * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.client.plugins.auth.providers.RefreshTokensParams)
  */
 public class RefreshTokensParams(
     public val client: HttpClient,
@@ -37,6 +41,8 @@ public class RefreshTokensParams(
 
     /**
      * Marks that this request is for refreshing auth tokens, resulting in a special handling of it.
+     *
+     * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.client.plugins.auth.providers.RefreshTokensParams.markAsRefreshTokenRequest)
      */
     public fun HttpRequestBuilder.markAsRefreshTokenRequest() {
         attributes.put(AuthCircuitBreaker, Unit)
@@ -45,6 +51,8 @@ public class RefreshTokensParams(
 
 /**
  * A configuration for [BearerAuthProvider].
+ *
+ * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.client.plugins.auth.providers.BearerAuthConfig)
  */
 @KtorDsl
 public class BearerAuthConfig {
@@ -56,6 +64,8 @@ public class BearerAuthConfig {
 
     /**
      * Configures a callback that refreshes a token when the 401 status code is received.
+     *
+     * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.client.plugins.auth.providers.BearerAuthConfig.refreshTokens)
      */
     public fun refreshTokens(block: suspend RefreshTokensParams.() -> BearerTokens?) {
         refreshTokens = block
@@ -64,6 +74,8 @@ public class BearerAuthConfig {
     /**
      * Configures a callback that loads a cached token from a local storage.
      * Note: Using the same client instance here to make a request will result in a deadlock.
+     *
+     * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.client.plugins.auth.providers.BearerAuthConfig.loadTokens)
      */
     public fun loadTokens(block: suspend () -> BearerTokens?) {
         loadTokens = block
@@ -71,6 +83,8 @@ public class BearerAuthConfig {
 
     /**
      * Sends credentials without waiting for [HttpStatusCode.Unauthorized].
+     *
+     * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.client.plugins.auth.providers.BearerAuthConfig.sendWithoutRequest)
      */
     public fun sendWithoutRequest(block: (HttpRequestBuilder) -> Boolean) {
         sendWithoutRequest = block
@@ -84,6 +98,8 @@ public class BearerAuthConfig {
  * by using external providers, such as Google, Facebook, Twitter, and so on.
  *
  * You can learn more from [Bearer authentication](https://ktor.io/docs/bearer-client.html).
+ *
+ * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.client.plugins.auth.providers.BearerAuthProvider)
  */
 public class BearerAuthProvider(
     private val refreshTokens: suspend RefreshTokensParams.() -> BearerTokens?,
@@ -103,6 +119,8 @@ public class BearerAuthProvider(
 
     /**
      * Checks if current provider is applicable to the request.
+     *
+     * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.client.plugins.auth.providers.BearerAuthProvider.isApplicable)
      */
     override fun isApplicable(auth: HttpAuthHeader): Boolean {
         if (auth.authScheme != AuthScheme.Bearer) {
@@ -122,6 +140,8 @@ public class BearerAuthProvider(
 
     /**
      * Adds an authentication method headers and credentials.
+     *
+     * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.client.plugins.auth.providers.BearerAuthProvider.addRequestHeaders)
      */
     override suspend fun addRequestHeaders(request: HttpRequestBuilder, authHeader: HttpAuthHeader?) {
         val token = tokensHolder.loadToken() ?: return
@@ -142,6 +162,19 @@ public class BearerAuthProvider(
         return newToken != null
     }
 
+    /**
+     * Clears the currently stored authentication tokens from the cache.
+     *
+     * This method should be called in the following cases:
+     * - When access or refresh tokens have been updated externally
+     * - When you want to clear sensitive token data (for example, during logout)
+     *
+     * Note: The result of `loadTokens` invocation is cached internally.
+     * Calling this method will force the next authentication attempt to fetch fresh tokens
+     * through the configured `loadTokens` function.
+     *
+     * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.client.plugins.auth.providers.BearerAuthProvider.clearToken)
+     */
     public fun clearToken() {
         tokensHolder.clearToken()
     }

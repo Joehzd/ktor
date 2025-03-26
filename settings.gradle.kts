@@ -1,9 +1,9 @@
 /*
- * Copyright 2014-2024 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
+ * Copyright 2014-2025 JetBrains s.r.o and contributors. Use of this source code is governed by the Apache 2.0 license.
  */
 
 pluginManagement {
-    includeBuild("gradle-settings-conventions")
+    includeBuild("build-settings-logic")
 }
 
 plugins {
@@ -13,6 +13,9 @@ plugins {
 }
 
 rootProject.name = "ktor"
+
+includeBuild("build-logic")
+includeBuild("ktor-test-server")
 
 include(":ktor-server")
 include(":ktor-server:ktor-server-core")
@@ -34,6 +37,7 @@ include(":ktor-server:ktor-server-netty")
 include(":ktor-server:ktor-server-cio")
 include(":ktor-client")
 include(":ktor-client:ktor-client-core")
+include(":ktor-client:ktor-client-test-base")
 include(":ktor-client:ktor-client-tests")
 include(":ktor-client:ktor-client-apache")
 include(":ktor-client:ktor-client-apache5")
@@ -132,5 +136,5 @@ include(":ktor-shared:ktor-events")
 include(":ktor-shared:ktor-websocket-serialization")
 include(":ktor-shared:ktor-websockets")
 include(":ktor-shared:ktor-sse")
-include(":ktor-shared:ktor-junit")
+include(":ktor-shared:ktor-test-base")
 include(":ktor-java-modules-test")
