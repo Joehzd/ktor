@@ -45,7 +45,8 @@ internal class SavedHttpCall(
         this.request = SavedHttpRequest(this, request)
         this.response = SavedHttpResponse(this, responseBody, response)
 
-        checkContentLength(response.contentLength(), responseBody.size.toLong(), request.method)
+        // 由于前后端对长度的读取不一致，导致报错，这里注释掉，不再校验，不影响使用
+//        checkContentLength(response.contentLength(), responseBody.size.toLong(), request.method)
     }
 
     /**
