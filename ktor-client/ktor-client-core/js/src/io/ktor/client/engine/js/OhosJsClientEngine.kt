@@ -179,6 +179,7 @@ internal class OhosJsClientEngine(
         }
     }
 
+    @OptIn(InternalAPI::class)
     private suspend fun executeWebSocketRequest(
         request: HttpRequestData,
         callContext: CoroutineContext
@@ -188,8 +189,12 @@ internal class OhosJsClientEngine(
         val urlString = request.url.toString()
         val socket: WebSocket.WebSocket = createOhosWebSocket()
         val options: WebSocket.WebSocketRequestOptions = js("{}")
+        val jsHeaders = js("({})")
+        mergeHeaders(request.headers, request.body) { key, value ->
+            jsHeaders[key] = value
+        }
         options.apply {
-            header = request.headers
+            header = jsHeaders
         }
         val session = OhosJsWebSocketSession(callContext, socket)
         val connect = socket.connect(url = urlString, options = options).catch {
