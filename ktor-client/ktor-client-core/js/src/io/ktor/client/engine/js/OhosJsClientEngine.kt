@@ -42,7 +42,9 @@ internal class OhosJsClientEngine(
     override suspend fun execute(data: HttpRequestData): HttpResponseData {
         val callContext = callContext()
         val clientConfig = data.attributes[CLIENT_CONFIG]
-        println("data 数据: data:${data.toString()}")
+        if (config.isDebug) {
+            config.printLog { "data 数据: data:${data}" }
+        }
         if (data.isUpgradeRequest()) {
             return executeWebSocketRequest(data, callContext)
         }
@@ -58,7 +60,9 @@ internal class OhosJsClientEngine(
                 jsHeaders[key] = value
             }
             header = jsHeaders
-            println("body 没有写入之前: data:${data},headers:${data.headers}")
+            if (config.isDebug) {
+                config.printLog { "body 没有写入之前: data:${data},headers:${data.headers}" }
+            }
             when (val content = data.body) {
                 is OutgoingContent.ByteArrayContent -> {
                     extraData = content.bytes().toJsArray().buffer
@@ -68,7 +72,11 @@ internal class OhosJsClientEngine(
                     val readChannel = content.readFrom()
                     // 这里 readRemaining() 会一直等到 channel 被写完或 close()
                     val byteArray = readChannel.readRemaining().readByteArray()
-                    println("body 实际读入 ${byteArray.size}")
+                    if (config.isDebug) {
+                        config.printLog {
+                            "body 实际读入 ${byteArray.size}"
+                        }
+                    }
                     extraData = byteArray.toJsArray().buffer
                 }
 
@@ -96,7 +104,11 @@ internal class OhosJsClientEngine(
         val response = httpRequest.request(data.url.toString(), options).then(onFulfilled = {
             it
         }, onRejected = {
-            println("收到异常：${data.url} -- ${it.message ?: it.cause?.message ?: "华为网络请求失败"}")
+            if (config.isDebug) {
+                config.printLog {
+                    "收到异常：${data.url} -- ${it.message ?: it.cause?.message ?: "华为网络请求失败"}"
+                }
+            }
             val jsHeaders = js("({})")
             jsHeaders["Content-Type"] = "application/json"
             object : Http.HttpResponse {
@@ -107,7 +119,7 @@ internal class OhosJsClientEngine(
                 override val resultType: Http._HttpDataType
                     get() = Http._HttpDataType
                 override val responseCode: Int
-                    get() = 400
+                    get() = 402
                 override val header: Any
                     get() = jsHeaders
                 override val cookies: String
@@ -164,7 +176,11 @@ internal class OhosJsClientEngine(
                     for (entry in js("Object").entries(response.header)) {
                         val key = entry[0]
                         val value = entry[1]
-                        println("key ${key.toString()} -- value ：${value.toString()}")
+                        if (config.isDebug){
+                            config.printLog {
+                                "key ${key.toString()} -- value ：${value.toString()}"
+                            }
+                        }
                         // todo hzd  cookie 需要单独处理
                         append(key.toString(), value.toString())
                     }
@@ -198,7 +214,11 @@ internal class OhosJsClientEngine(
         }
         val session = OhosJsWebSocketSession(callContext, socket)
         val connect = socket.connect(url = urlString, options = options).catch {
-            println("WebSocket 连接失败：${it.message}")
+            if (config.isDebug) {
+                config.printLog {
+                    "WebSocket 连接失败：${it.message}"
+                }
+            }
             false
         }.await()
         if (connect) {
