@@ -1,3 +1,40 @@
+# 3.1.3
+> Published 5 May 2025
+
+### Improvements
+* Implement toString for staticContentRoute ([KTOR-8451](https://youtrack.jetbrains.com/issue/KTOR-8451))
+* Don't send Authorization header for requests marked with markAsRefreshTokenRequest ([KTOR-8107](https://youtrack.jetbrains.com/issue/KTOR-8107))
+* ByteChannel single-byte operations are slow ([KTOR-8412](https://youtrack.jetbrains.com/issue/KTOR-8412))
+* Receiving multipart without Content-Length is very slow ([KTOR-8407](https://youtrack.jetbrains.com/issue/KTOR-8407))
+* MicrometerMetrics: different path 404s requests can be abused to trigger OOM ([KTOR-8276](https://youtrack.jetbrains.com/issue/KTOR-8276))
+* Compression & Static Content: No Vary Header when serving a compressed resource ([KTOR-8326](https://youtrack.jetbrains.com/issue/KTOR-8326))
+* HttpTimeout: Reference to nonexistent INFINITE_TIMEOUT_MS in the exception message ([KTOR-8358](https://youtrack.jetbrains.com/issue/KTOR-8358))
+
+### Bugfixes
+* Websockets: Unable to send a frame when ktor-serialization-kotlinx-json-jvm dependency is defined in Maven build ([KTOR-7662](https://youtrack.jetbrains.com/issue/KTOR-7662))
+* OkHttp: Cancelling of SSE request job doesn't cancel the connection ([KTOR-8409](https://youtrack.jetbrains.com/issue/KTOR-8409))
+* OkHttp: Exceptions are not propagated to flow collectors ([KTOR-7947](https://youtrack.jetbrains.com/issue/KTOR-7947))
+* OOM in CountedByteReadChannel while copying from multipart/form-data part channel ([KTOR-8317](https://youtrack.jetbrains.com/issue/KTOR-8317))
+* Apache5: "ProtocolException: OPTIONS request must have Content-Type header" is thrown when body isn't set ([KTOR-8318](https://youtrack.jetbrains.com/issue/KTOR-8318))
+* Netty/Websockets: server processes hanging in CLOSE_WAIT state after many concurrent requests ([KTOR-7965](https://youtrack.jetbrains.com/issue/KTOR-7965))
+* Update JTE to the version supporting Kotlin 2.1.0 ([KTOR-8030](https://youtrack.jetbrains.com/issue/KTOR-8030))
+
+
+# 3.1.2
+> Published 27 March 2025
+
+### Improvements
+* Update Kotlin to 2.1.20 ([KTOR-8081](https://youtrack.jetbrains.com/issue/KTOR-8081))
+* Remove empty artifacts from publication ([KTOR-8336](https://youtrack.jetbrains.com/issue/KTOR-8336))
+
+### Bugfixes
+* URL-safe base64 decoding problem ([KTOR-8292](https://youtrack.jetbrains.com/issue/KTOR-8292))
+* Auth: AuthTokenHolder.clearToken executed in the middle of an ongoing token update doesn't actually clear ([KTOR-8312](https://youtrack.jetbrains.com/issue/KTOR-8312))
+* Android: "Array has more than one element" error when starting a server with release build ([KTOR-7298](https://youtrack.jetbrains.com/issue/KTOR-7298))
+* WebSockets: extensions in sec-websocket-extensions header must be separated by comma ([KTOR-6384](https://youtrack.jetbrains.com/issue/KTOR-6384))
+* OkHttp: Cancelling of SSESession.incoming flow doesn't cancel connection ([KTOR-8244](https://youtrack.jetbrains.com/issue/KTOR-8244))
+
+
 # 3.1.1
 > Published 24 February 2025
 

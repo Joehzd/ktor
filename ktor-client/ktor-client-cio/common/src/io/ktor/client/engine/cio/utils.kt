@@ -65,8 +65,10 @@ internal suspend fun writeHeaders(
             builder.headerLine(HttpHeaders.Host, host)
         }
 
+        val isGetOrHeadOrOptions = method == HttpMethod.Get || method == HttpMethod.Head || method == HttpMethod.Options
+        val hasContent = body !is OutgoingContent.NoContent
         if (contentLength != null) {
-            if ((method != HttpMethod.Get && method != HttpMethod.Head) || body !is OutgoingContent.NoContent) {
+            if (!isGetOrHeadOrOptions || hasContent) {
                 builder.headerLine(HttpHeaders.ContentLength, contentLength)
             }
         }
@@ -254,9 +256,9 @@ internal suspend fun startTunnel(
 internal fun HttpHeadersMap.toMap(): Map<String, List<String>> {
     val result = mutableMapOf<String, MutableList<String>>()
 
-    for (index in 0 until size) {
-        val key = nameAt(index).toString()
-        val value = valueAt(index).toString()
+    for (offset in offsets()) {
+        val key = nameAtOffset(offset).toString()
+        val value = valueAtOffset(offset).toString()
 
         if (result[key]?.add(value) == null) {
             result[key] = mutableListOf(value)

@@ -4,6 +4,9 @@
 
 package ktorbuild.targets
 
+import ktorbuild.ProjectTag
+import ktorbuild.addProjectTag
+import ktorbuild.internal.java
 import ktorbuild.internal.kotlin
 import ktorbuild.internal.ktorBuild
 import ktorbuild.internal.libs
@@ -17,6 +20,8 @@ import org.gradle.kotlin.dsl.*
 import org.jetbrains.kotlin.gradle.targets.jvm.tasks.KotlinJvmTest
 
 internal fun Project.configureJvm() {
+    addProjectTag(ProjectTag.Jvm)
+
     kotlin {
         sourceSets {
             jvmMain.dependencies {
@@ -40,7 +45,7 @@ private fun Project.configureTests() {
         maxHeapSize = "2g"
         exclude("**/*StressTest*")
         useJUnitPlatform()
-        configureJavaToolchain(ktorBuild.jvmToolchain, ktorBuild.jvmTestToolchain)
+        configureJavaToolchain(java.toolchain.languageVersion, ktorBuild.jvmTestToolchain)
     }
 
     tasks.register<Test>("stressTest") {
@@ -53,7 +58,7 @@ private fun Project.configureTests() {
         systemProperty("enable.stress.tests", "true")
         include("**/*StressTest*")
         useJUnitPlatform()
-        configureJavaToolchain(ktorBuild.jvmToolchain, ktorBuild.jvmTestToolchain)
+        configureJavaToolchain(java.toolchain.languageVersion, ktorBuild.jvmTestToolchain)
     }
 }
 
@@ -99,7 +104,9 @@ private fun Test.configureJavaToolchain(
 }
 
 fun Project.javaModuleName(): String {
-    return (if (this.name.startsWith("ktor-")) "io.${project.name}" else "io.ktor.${project.name}")
+    check(name.startsWith("ktor-")) { "Project name should start with prefix 'ktor-'." }
+
+    return "io.$name"
         .replace('-', '.')
         .replace("default.headers", "defaultheaders")
         .replace("double.receive", "doublereceive")

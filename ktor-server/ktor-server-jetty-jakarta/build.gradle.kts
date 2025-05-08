@@ -4,34 +4,32 @@
 
 description = ""
 
-ktorBuild {
-    // The minimal JVM version required for Jetty 10+
-    jvmToolchain(11)
+plugins {
+    id("ktorbuild.project.library")
 }
 
 kotlin {
-    sourceSets {
-        jvmMain {
-            dependencies {
-                api(project(":ktor-server:ktor-server-core"))
-                api(project(":ktor-server:ktor-server-servlet-jakarta"))
-                api(libs.jetty.server.jakarta)
-                api(libs.jetty.servlets.jakarta)
-                api(libs.jetty.alpn.server.jakarta)
-                api(libs.jetty.alpn.java.server.jakarta)
-                api(libs.jetty.alpn.openjdk8.server)
-                api(libs.jetty.http2.server.jakarta)
-            }
-        }
-        jvmTest {
-            dependencies {
-                api(libs.kotlin.test.junit5)
-                api(project(":ktor-server:ktor-server-core"))
-                api(project(":ktor-server:ktor-server-test-base"))
-                api(project(":ktor-server:ktor-server-test-suites"))
+    // The minimal JVM version required for Jetty 10+
+    jvmToolchain(11)
 
-                api(libs.jetty.servlet.jakarta)
-            }
+    sourceSets {
+        jvmMain.dependencies {
+            api(project(":ktor-server:ktor-server-core"))
+            api(project(":ktor-server:ktor-server-servlet-jakarta"))
+            api(libs.jetty.server.jakarta)
+            api(libs.jetty.servlets.jakarta)
+            api(libs.jetty.alpn.server.jakarta)
+            api(libs.jetty.alpn.java.server.jakarta)
+            api(libs.jetty.alpn.openjdk8.server)
+            api(libs.jetty.http2.server.jakarta)
+        }
+        jvmTest.dependencies {
+            api(libs.kotlin.test.junit5)
+            api(project(":ktor-server:ktor-server-core"))
+            api(project(":ktor-server:ktor-server-test-base"))
+            api(project(":ktor-server:ktor-server-test-suites"))
+
+            api(libs.jetty.servlet.jakarta)
         }
     }
 }

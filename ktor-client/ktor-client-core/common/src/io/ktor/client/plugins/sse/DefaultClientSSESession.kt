@@ -14,6 +14,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onCompletion
 import kotlin.coroutines.CoroutineContext
 
 @OptIn(InternalAPI::class)
@@ -44,7 +45,7 @@ public class DefaultClientSSESession(
         // we have an outer while to obtain new input
         while (this@DefaultClientSSESession.coroutineContext.isActive) {
             while (this@DefaultClientSSESession.coroutineContext.isActive) {
-                val event = input.parseEvent() ?: break
+                val event = input.tryParseEvent() ?: break
 
                 if (event.isCommentsEvent() && !showCommentEvents) continue
                 if (event.isRetryEvent() && !showRetryEvents) continue
@@ -61,7 +62,7 @@ public class DefaultClientSSESession(
     }.catch { cause ->
         when (cause) {
             is CancellationException -> {
-                close()
+                // CancellationException will be handled by onCompletion operator
             }
 
             else -> {
@@ -69,6 +70,12 @@ public class DefaultClientSSESession(
                 close()
                 throw cause
             }
+        }
+    }.onCompletion { cause ->
+        // Because catch operator only catch throwable occurs in upstream flow, so we use onCompletion operator instead
+        // to handle CancellationException occurs in either upstream flow or downstream flow.
+        if (cause is CancellationException) {
+            close()
         }
     }
 
@@ -132,6 +139,14 @@ public class DefaultClientSSESession(
         coroutineContext.cancel()
         input.cancel()
     }
+
+    private suspend fun ByteReadChannel.tryParseEvent(): ServerSentEvent? =
+        try {
+            parseEvent()
+        } catch (_: ClosedByteChannelException) {
+            // this is expected when the server disconnects
+            null
+        }
 
     private suspend fun ByteReadChannel.parseEvent(): ServerSentEvent? {
         val data = StringBuilder()
