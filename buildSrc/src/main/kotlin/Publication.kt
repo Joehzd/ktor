@@ -83,6 +83,7 @@ fun Project.configurePublication() {
     val publishingPassword: String? = System.getenv("PUBLISHING_PASSWORD")
 
     val repositoryId: String? = System.getenv("REPOSITORY_ID")
+    // 不能开 feilian
     val publishingUrl: String = "http://192.168.87.17:8081/repository/kimi-android/"
     val publishingSnapshotsUrl: String = "http://192.168.202.222:8081/repository/maven-snapshots/"
 
