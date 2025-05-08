@@ -52,7 +52,7 @@ publishing {
 }
 
 registerCommonPublishTask()
-configureSigning()
+//configureSigning()
 
 plugins.withId("ktorbuild.kmp") {
     tasks.withType<AbstractPublishToMaven>().configureEach {
