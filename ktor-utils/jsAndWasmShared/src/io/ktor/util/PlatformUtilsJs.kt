@@ -18,3 +18,8 @@ internal fun hasNodeApi(): Boolean = js(
     && window.process.versions.node != null)
 """
 )
+internal fun hasWindowApi(): Boolean = js(
+    """
+       typeof window !== 'undefined'
+    """
+) as Boolean

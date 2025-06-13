@@ -4,6 +4,7 @@
 
 package io.ktor.utils.io.charsets
 
+import io.ktor.utils.io.js.ohos.*
 import kotlinx.io.*
 import org.khronos.webgl.Int8Array
 
@@ -90,11 +91,19 @@ internal actual fun CharsetEncoder.encodeImpl(
     }
 
     require(charset === Charsets.UTF_8) { "Only UTF-8 encoding is supported in JS" }
+    // 优先使用 ohos，如果通用 js 也要用，那就用报错兜住
 
-    val encoder = TextEncoder() // Only UTF-8 is supported so we know that at most 6 bytes per character is used
-    val result = encoder.encode(input.substring(fromIndex, toIndex))
-    dst.write(result.unsafeCast<ByteArray>())
-    return result.length
+    try {
+        val encoder = Util.TextEncoder()
+        val result = encoder.encode(input.substring(fromIndex, toIndex))
+        dst.write(result.unsafeCast<ByteArray>())
+        return result.length
+    } catch (cause: Throwable) {
+        val encoder = TextEncoder() // Only UTF-8 is supported so we know that at most 6 bytes per character is used
+        val result = encoder.encode(input.substring(fromIndex, toIndex))
+        dst.write(result.unsafeCast<ByteArray>())
+        return result.length
+    }
 }
 
 // ----------------------------------------------------------------------
