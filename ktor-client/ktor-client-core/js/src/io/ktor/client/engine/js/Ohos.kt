@@ -21,8 +21,8 @@ import io.ktor.client.engine.HttpClientEngineFactory
  *
  * You can learn more about client engines from [Engines](https://ktor.io/docs/http-client-engines.html).
  */
-public object Ohos : HttpClientEngineFactory<HttpClientEngineConfig> {
-    override fun create(block: HttpClientEngineConfig.() -> Unit): HttpClientEngine =
+public object Ohos : HttpClientEngineFactory<OhosHttpClientEngineConfig> {
+    override fun create(block: OhosHttpClientEngineConfig.() -> Unit): HttpClientEngine =
         OhosJsClientEngine(OhosHttpClientEngineConfig().apply(block))
 }
 
@@ -30,4 +30,4 @@ public object Ohos : HttpClientEngineFactory<HttpClientEngineConfig> {
  * Creates a [Ohos] client engine.
  */
 @JsName("OhosClient")
-public fun OhosClient(): HttpClientEngineFactory<HttpClientEngineConfig> = Ohos
+public fun OhosClient(): HttpClientEngineFactory<OhosHttpClientEngineConfig> = Ohos
