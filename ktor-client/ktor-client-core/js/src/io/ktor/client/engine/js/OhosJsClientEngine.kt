@@ -5,6 +5,7 @@
 package io.ktor.client.engine.js
 
 import com.kanyun.kotlin.ktor.ohos.api.Http
+import io.ktor.client.call.UnsupportedContentTypeException
 import io.ktor.client.engine.CLIENT_CONFIG
 import io.ktor.client.engine.HttpClientEngineBase
 import io.ktor.client.engine.callContext
@@ -38,6 +39,44 @@ internal class OhosJsClientEngine(
 
     override val supportedCapabilities = setOf(HttpTimeoutCapability, WebSocketCapability, SSECapability)
 
+    internal suspend fun OutgoingContent.convertToOhosBody(callContext: CoroutineContext): Any = when (this) {
+        is OutgoingContent.ByteArrayContent -> bytes().toJsArray().buffer
+
+        is OutgoingContent.ReadChannelContent -> {
+            // 返回 ByteReadChannel
+            val readChannel = readFrom()
+            // 这里 readRemaining() 会一直等到 channel 被写完或 close()
+            val byteArray = readChannel.readRemaining().readByteArray()
+            if (config.isDebug) {
+                config.printLog {
+                    "body 实际读入 ${byteArray.size}"
+                }
+            }
+            byteArray.toJsArray().buffer
+        }
+
+        is OutgoingContent.WriteChannelContent -> {
+            CoroutineScope(callContext).writer(callContext) {
+                writeTo(channel)
+            }.channel.readRemaining().readByteArray()
+            // 1. 启动一个协程写数据
+            val writerJob = CoroutineScope(callContext).writer(callContext) {
+                writeTo(channel)
+            }
+            // 2. 等待写协程完成后，再读出 ByteArray
+            val writtenChannel = writerJob.channel
+            // 3. 等写完后，统一读到 byteArray 中
+            writtenChannel.readRemaining().readByteArray().toJsArray().buffer
+        }
+
+        is OutgoingContent.NoContent -> ByteArray(0).toJsArray().buffer
+        is OutgoingContent.ContentWrapper -> delegate().convertToOhosBody(callContext)
+        else -> {
+            config.printLog { "data 数据: 不支持的类型" }
+            ByteArray(0).toJsArray().buffer
+        }
+    }
+
     @InternalAPI
     override suspend fun execute(data: HttpRequestData): HttpResponseData {
         val callContext = callContext()
@@ -63,38 +102,7 @@ internal class OhosJsClientEngine(
             if (config.isDebug) {
                 config.printLog { "body 没有写入之前: data:${data},headers:${data.headers}" }
             }
-            when (val content = data.body) {
-                is OutgoingContent.ByteArrayContent -> {
-                    extraData = content.bytes().toJsArray().buffer
-                }
-                is OutgoingContent.ReadChannelContent -> {
-                    // 返回 ByteReadChannel
-                    val readChannel = content.readFrom()
-                    // 这里 readRemaining() 会一直等到 channel 被写完或 close()
-                    val byteArray = readChannel.readRemaining().readByteArray()
-                    if (config.isDebug) {
-                        config.printLog {
-                            "body 实际读入 ${byteArray.size}"
-                        }
-                    }
-                    extraData = byteArray.toJsArray().buffer
-                }
-
-                is OutgoingContent.WriteChannelContent -> {
-                    CoroutineScope(callContext).writer(callContext) {
-                        content.writeTo(channel)
-                    }.channel.readRemaining().readByteArray()
-                    // 1. 启动一个协程写数据
-                    val writerJob = CoroutineScope(callContext).writer(callContext) {
-                        content.writeTo(channel)
-                    }
-                    // 2. 等待写协程完成后，再读出 ByteArray
-                    val writtenChannel = writerJob.channel
-                    // 3. 等写完后，统一读到 byteArray 中
-                    extraData = writtenChannel.readRemaining().readByteArray().toJsArray().buffer
-                }
-                else -> {}
-            }
+            extraData = data.body.convertToOhosBody(callContext)
             connectTimeout = config.connectTimeout
             readTimeout = config.readTimeout
             usingProtocol = Http.HttpProtocol.HTTP2
@@ -176,7 +184,7 @@ internal class OhosJsClientEngine(
                     for (entry in js("Object").entries(response.header)) {
                         val key = entry[0]
                         val value = entry[1]
-                        if (config.isDebug){
+                        if (config.isDebug) {
                             config.printLog {
                                 "key ${key.toString()} -- value ：${value.toString()}"
                             }
