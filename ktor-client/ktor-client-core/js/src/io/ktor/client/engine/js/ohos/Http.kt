@@ -1,7 +1,7 @@
 package com.kanyun.kotlin.ktor.ohos.api
 
 import io.ktor.client.engine.js.ohos.*
-import io.ktor.client.fetch.ArrayBuffer
+import org.khronos.webgl.ArrayBuffer
 import kotlin.js.Promise
 
 /**
@@ -71,6 +71,7 @@ internal external class Http {
          * @since 10
          */
         val host: String;
+
         /**
          * Host port.
          * @type {number}
@@ -78,6 +79,7 @@ internal external class Http {
          * @since 10
          */
         val port: Int;
+
         /**
          * Do not use a blocking list for proxy servers.
          * @type {Array<string>}
@@ -229,6 +231,7 @@ internal external class Http {
          * @since 10
          */
         var usingProtocol: Int?
+
         /**
          * If this parameter is set as type of boolean, the system will use default proxy or not use proxy.
          * If this parameter is set as type of HttpProxy, the system will use the specified HttpProxy.
@@ -237,6 +240,7 @@ internal external class Http {
          * @since 10
          */
         var usingProxy: Any?
+
         /**
          * If this parameter is set, the system will use ca path specified by user, or else use preset ca by the system.
          * @type {?string}
@@ -422,7 +426,7 @@ internal external class Http {
          * @crossplatform
          * @since 10
          */
-        fun request(url: String, options: HttpRequestOptions, callback: (BusinessError,HttpResponse)->Unit)
+        fun request(url: String, options: HttpRequestOptions, callback: (BusinessError, HttpResponse) -> Unit)
         /**
          * Initiates an HTTP request to a given URL.
          * @permission ohos.permission.INTERNET
@@ -505,6 +509,7 @@ internal external class Http {
          * @since 10
          */
         fun request(url: String, options: HttpRequestOptions?): Promise<HttpResponse>;
+
         /**
          * Initiates an HTTP request to a given URL, applicable to scenarios where http response supports streaming.
          * @permission ohos.permission.INTERNET
@@ -546,6 +551,7 @@ internal external class Http {
          * @since 10
          */
         fun requestInStream(url: String, callback: AsyncCallback<Int>)
+
         /**
          * Initiates an HTTP request to a given URL, applicable to scenarios where http response supports streaming.
          * @permission ohos.permission.INTERNET
@@ -587,6 +593,7 @@ internal external class Http {
          * @since 10
          */
         fun requestInStream(url: String, options: HttpRequestOptions, callback: AsyncCallback<Int>)
+
         /**
          * Initiates an HTTP request to a given URL, applicable to scenarios where http response supports streaming.
          * @permission ohos.permission.INTERNET
@@ -640,6 +647,7 @@ internal external class Http {
          * @since 10
          */
         fun destroy()
+
         /**
          * Registers an observer for HTTP Response Header events.
          * @param { "headerReceive" } type - Indicates Event name.
@@ -650,6 +658,7 @@ internal external class Http {
          * @useinstead on_headersReceive
          */
         fun on(type: String /* "headerReceive" */, callback: AsyncCallback<Any>)
+
         /**
          * Unregisters the observer for HTTP Response Header events.
          * @param { "headerReceive" } type - Indicates Event name.
@@ -708,6 +717,7 @@ internal external class Http {
          * @since 10
          */
         fun once(type: String /* "headersReceive" */, callback: Callback<Any>)
+
         /**
          * Registers an observer for receiving HTTP Response data events continuously.
          * @param { "dataReceive" } type - Indicates Event name.
@@ -715,7 +725,8 @@ internal external class Http {
          * @syscap SystemCapability.Communication.NetStack
          * @since 10
          */
-        fun on(type: String /* "dataReceive" */, callback: Callback<ArrayBuffer>)
+        fun on(type: String /* "dataReceive" */, callback: (ArrayBuffer) -> Unit)
+
         /**
          * Unregisters an observer for receiving HTTP Response data events continuously.
          * @param { "dataReceive" } type - Indicates Event name.
@@ -724,6 +735,7 @@ internal external class Http {
          * @since 10
          */
         fun off(type: String /* "dataReceive" */, callback: Callback<ArrayBuffer>?)
+
         /**
          * Registers an observer for receiving HTTP Response data ends events.
          * @param { "dataEnd" } type - Indicates Event name.
@@ -731,7 +743,9 @@ internal external class Http {
          * @syscap SystemCapability.Communication.NetStack
          * @since 10
          */
-        fun on(type: String /* "dataEnd" */, callback: Callback<Unit>)
+        fun on(type: String /* "dataEnd" */, callback: (Unit) -> Unit)
+
+
         /**
          * Unregisters an observer for receiving HTTP Response data ends events.
          * @param { "dataEnd" } type - Indicates Event name.
@@ -740,6 +754,7 @@ internal external class Http {
          * @since 10
          */
         fun off(type: String /* "dataEnd" */, callback: Callback<Unit>?)
+
         /**
          * Registers an observer for progress of receiving HTTP Response data events.
          * @param { 'dataReceiveProgress' } type - Indicates Event name.
@@ -747,7 +762,8 @@ internal external class Http {
          * @syscap SystemCapability.Communication.NetStack
          * @since 10
          */
-        fun on(type: String /* 'dataReceiveProgress' */, callback: Callback<DataProgress>)
+        fun on(type: String /* "dataEnd" */, callback: (DataProgress) -> Unit)
+
         /**
          * Unregisters an observer for progress of receiving HTTP Response data events.
          * @param { 'dataReceiveProgress' } type - Indicates Event name.

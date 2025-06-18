@@ -5,6 +5,28 @@
 package io.ktor.client.engine.js
 
 import com.kanyun.kotlin.ktor.ohos.api.Http
+import com.kanyun.kotlin.ktor.ohos.api.Http.HttpRequest.DataProgress
+import io.ktor.client.engine.*
+import io.ktor.client.engine.js.ohos.*
+import io.ktor.client.engine.js.ohos.WebSocket.Companion.createWebSocket
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.sse.*
+import io.ktor.client.plugins.websocket.*
+import io.ktor.client.request.*
+import io.ktor.client.utils.*
+import io.ktor.http.*
+import io.ktor.http.content.*
+import io.ktor.util.*
+import io.ktor.util.date.*
+import io.ktor.utils.io.*
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.resume
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.await
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.io.readByteArray
+import io.ktor.utils.io.core.*
 import io.ktor.client.call.UnsupportedContentTypeException
 import io.ktor.client.engine.CLIENT_CONFIG
 import io.ktor.client.engine.HttpClientEngineBase
@@ -24,7 +46,11 @@ import io.ktor.util.*
 import io.ktor.util.date.*
 import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
+import io.ktor.websocket.Frame
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.consumeEach
 import kotlinx.io.*
 import org.khronos.webgl.ArrayBuffer
 import org.khronos.webgl.Int8Array
@@ -32,6 +58,7 @@ import org.khronos.webgl.Uint8Array
 import org.khronos.webgl.set
 import kotlin.coroutines.*
 import kotlin.random.Random
+
 
 internal class OhosJsClientEngine(
     override val config: OhosHttpClientEngineConfig
@@ -121,6 +148,10 @@ internal class OhosJsClientEngine(
             expectDataType = Http.HttpDataType.ARRAY_BUFFER
         }
 
+        if (data.isSseRequest()) {
+            return executeSseRequest(httpRequest, data, options, callContext)
+        }
+
         val response = httpRequest.request(data.url.toString(), options).then(onFulfilled = {
             it
         }, onRejected = {
@@ -179,20 +210,14 @@ internal class OhosJsClientEngine(
         // 如果是 PUT 请求，且返回码是 200，且 header 中有的 Content length 为 0，那么返回一个空的 HttpResponseData
         if (response.responseCode == 200 && data.method == HttpMethod.Put && !hasContentLength) {
             return HttpResponseData(
-                HttpStatusCode(response.responseCode, ""),
-                requestTime,
-                buildHeaders {
+                HttpStatusCode(response.responseCode, ""), requestTime, buildHeaders {
                     append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-                },
-                HttpProtocolVersion.HTTP_1_1,
-                "{}",
-                callContext
+                }, HttpProtocolVersion.HTTP_1_1, "{}", callContext
             )
         } else {
+            config.printLog { "响应数据：${data.url} -- ${response.result}" }
             return HttpResponseData(
-                HttpStatusCode(response.responseCode, ""),
-                requestTime,
-                buildHeaders {
+                HttpStatusCode(response.responseCode, ""), requestTime, buildHeaders {
                     for (entry in js("Object").entries(response.header)) {
                         val key = entry[0]
                         val value = entry[1]
@@ -209,24 +234,94 @@ internal class OhosJsClientEngine(
                     }
                 },
                 HttpProtocolVersion.HTTP_1_1,
-                if (data.isSseRequest() && data.body is SSEClientContent) {
-                    DefaultClientSSESession(
-                        content = data.body,
-                        input = responseChannel,
-                        coroutineContext = callContext,
-                    )
-                } else {
-                    responseChannel
-                },
+                responseChannel,
                 callContext
             )
         }
     }
 
     @OptIn(InternalAPI::class)
-    private suspend fun executeWebSocketRequest(
-        request: HttpRequestData,
+    private suspend fun CoroutineScope.executeSseRequest(
+        httpRequest: Http.HttpRequest,
+        requestData: HttpRequestData,
+        options: Http.HttpRequestOptions,
         callContext: CoroutineContext
+    ): HttpResponseData {
+        val requestTime = GMTDate()
+        val _incoming: Channel<ByteArray> = Channel(Channel.UNLIMITED)
+        val incoming: ReceiveChannel<ByteArray> = _incoming
+
+
+        val sseChannel = ByteChannel(autoFlush = true)
+        val sseSession = DefaultClientSSESession(
+            content = requestData.body as SSEClientContent,
+            input = sseChannel,
+            coroutineContext = callContext,
+        )
+        val scope = this@executeSseRequest
+        scope.launch(callContext) {
+            incoming.consumeEach {
+                if (this.isActive) {
+                    sseChannel.writeFully(it)
+                }
+            }
+        }
+        // 设置数据接收监听
+        httpRequest.on(
+            type = "dataReceive",
+            callback = { arrayBuffer: ArrayBuffer ->
+                if (this.isActive) {
+                    _incoming.trySend(Int8Array(arrayBuffer).toByteArray())
+                }
+            }
+        )
+
+        httpRequest.on(
+            type = "dataEnd",
+            callback = { unit: Unit ->
+                config.printLog { "executeSseRequest, dataEnd" }
+            }
+        )
+
+        httpRequest.on(
+            type = "dataReceiveProgress",
+            callback = { progress: DataProgress ->
+                config.printLog { "executeSseRequest, dataReceiveProgress, ${progress}" }
+            }
+        )
+
+        val result = httpRequest.requestInStream(
+            requestData.url.toString(),
+            options
+        ).then { i ->
+            config.printLog { "executeSseRequest, ErrorCode: $i" }
+            httpRequest.destroy()
+            callContext.cancel()
+        }
+            .catch { throwable ->
+                httpRequest.destroy()
+                config.printLog { "executeSseRequest, throwable: $throwable" }
+                callContext.cancel(kotlinx.coroutines.CancellationException(throwable))
+                throw throwable
+            }
+
+        config.printLog { "executeSseRequest promise result: $result" }
+
+        return HttpResponseData(
+            HttpStatusCode.OK,
+            requestTime,
+            HeadersBuilder().apply {
+                append(HttpHeaders.ContentType, ContentType.Text.EventStream.toString())
+            }.build(),
+            HttpProtocolVersion.HTTP_2_0,
+            sseSession,
+            callContext
+        )
+    }
+
+    @OptIn(InternalAPI::class)
+    private suspend fun executeWebSocketRequest(
+        request: HttpRequestData, callContext: CoroutineContext
     ): HttpResponseData {
         val requestTime = GMTDate()
 
