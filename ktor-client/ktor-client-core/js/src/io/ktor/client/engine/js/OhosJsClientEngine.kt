@@ -197,7 +197,15 @@ internal class OhosJsClientEngine(
                     }
                 },
                 HttpProtocolVersion.HTTP_1_1,
-                responseChannel,
+                if (data.isSseRequest() && data.body is SSEClientContent) {
+                    DefaultClientSSESession(
+                        content = data.body,
+                        input = responseChannel,
+                        coroutineContext = callContext,
+                    )
+                } else {
+                    responseChannel
+                },
                 callContext
             )
         }
