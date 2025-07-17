@@ -39,7 +39,7 @@ internal class OhosJsClientEngine(
 
     override val supportedCapabilities = setOf(HttpTimeoutCapability, WebSocketCapability, SSECapability)
 
-    internal suspend fun OutgoingContent.convertToOhosBody(callContext: CoroutineContext): Any = when (this) {
+    internal suspend fun OutgoingContent.convertToOhosBody(callContext: CoroutineContext,method: HttpMethod): Any = when (this) {
         is OutgoingContent.ByteArrayContent -> bytes().toJsArray().buffer
 
         is OutgoingContent.ReadChannelContent -> {
@@ -69,11 +69,23 @@ internal class OhosJsClientEngine(
             writtenChannel.readRemaining().readByteArray().toJsArray().buffer
         }
 
-        is OutgoingContent.NoContent -> ByteArray(0).toJsArray().buffer
-        is OutgoingContent.ContentWrapper -> delegate().convertToOhosBody(callContext)
+        is OutgoingContent.NoContent -> {
+            config.printLog { "data 数据: NoContent" }
+            if (method == HttpMethod.Post) {
+                "{}".toByteArray().toJsArray().buffer
+            } else {
+                ByteArray(0).toJsArray().buffer
+            }
+
+        }
+        is OutgoingContent.ContentWrapper -> delegate().convertToOhosBody(callContext,method = method)
         else -> {
             config.printLog { "data 数据: 不支持的类型" }
-            ByteArray(0).toJsArray().buffer
+            if (method == HttpMethod.Post) {
+                "{}".toByteArray().toJsArray().buffer
+            } else {
+                ByteArray(0).toJsArray().buffer
+            }
         }
     }
 
