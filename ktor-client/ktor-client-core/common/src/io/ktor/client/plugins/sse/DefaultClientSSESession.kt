@@ -156,9 +156,9 @@ public class DefaultClientSSESession(
     private suspend fun ByteReadChannel.tryParseEvent(): ServerSentEvent? =
         try {
             parseEvent()
-        } catch (_: ClosedByteChannelException) {
-            // this is expected when the server disconnects
-            null
+        } catch (e: ClosedByteChannelException) {
+            LOGGER.trace { "DefaultClientSSESession tryParseEvent error : $e" }
+            throw e
         }
 
     private suspend fun ByteReadChannel.parseEvent(): ServerSentEvent? {

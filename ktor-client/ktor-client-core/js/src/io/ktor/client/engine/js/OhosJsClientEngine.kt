@@ -261,15 +261,19 @@ internal class OhosJsClientEngine(
         val scope = this@executeSseRequest
         scope.launch(callContext) {
             incoming.consumeEach {
+                config.printLog { "executeSseRequest, incoming.consumeEach, ${this.isActive}" }
                 if (this.isActive) {
                     sseChannel.writeFully(it)
                 }
             }
+            config.printLog { "executeSseRequest, incoming.consumeEach end" }
+            callContext.cancel()
         }
         // 设置数据接收监听
         httpRequest.on(
             type = "dataReceive",
             callback = { arrayBuffer: ArrayBuffer ->
+                config.printLog { "executeSseRequest, dataReceive, ${this.isActive}" }
                 if (this.isActive) {
                     _incoming.trySend(Int8Array(arrayBuffer).toByteArray())
                 }
@@ -280,6 +284,7 @@ internal class OhosJsClientEngine(
             type = "dataEnd",
             callback = { unit: Unit ->
                 config.printLog { "executeSseRequest, dataEnd" }
+                sseChannel.close()
             }
         )
 
@@ -296,13 +301,12 @@ internal class OhosJsClientEngine(
         ).then { i ->
             config.printLog { "executeSseRequest, ErrorCode: $i" }
             httpRequest.destroy()
-            callContext.cancel()
+            sseChannel.close()
         }
             .catch { throwable ->
                 httpRequest.destroy()
-                config.printLog { "executeSseRequest, throwable: $throwable" }
-                callContext.cancel(kotlinx.coroutines.CancellationException(throwable))
-                throw throwable
+                config.printLog { "executeSseRequest, throwable: ${throwable::class.simpleName}, ${throwable.message}" }
+                sseChannel.close(throwable)
             }
 
         config.printLog { "executeSseRequest promise result: $result" }
