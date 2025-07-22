@@ -66,55 +66,57 @@ internal class OhosJsClientEngine(
 
     override val supportedCapabilities = setOf(HttpTimeoutCapability, WebSocketCapability, SSECapability)
 
-    internal suspend fun OutgoingContent.convertToOhosBody(callContext: CoroutineContext,method: HttpMethod): Any = when (this) {
-        is OutgoingContent.ByteArrayContent -> bytes().toJsArray().buffer
+    internal suspend fun OutgoingContent.convertToOhosBody(callContext: CoroutineContext, method: HttpMethod): Any =
+        when (this) {
+            is OutgoingContent.ByteArrayContent -> bytes().toJsArray().buffer
 
-        is OutgoingContent.ReadChannelContent -> {
-            // 返回 ByteReadChannel
-            val readChannel = readFrom()
-            // 这里 readRemaining() 会一直等到 channel 被写完或 close()
-            val byteArray = readChannel.readRemaining().readByteArray()
-            if (config.isDebug) {
-                config.printLog {
-                    "body 实际读入 ${byteArray.size}"
+            is OutgoingContent.ReadChannelContent -> {
+                // 返回 ByteReadChannel
+                val readChannel = readFrom()
+                // 这里 readRemaining() 会一直等到 channel 被写完或 close()
+                val byteArray = readChannel.readRemaining().readByteArray()
+                if (config.isDebug) {
+                    config.printLog {
+                        "body 实际读入 ${byteArray.size}"
+                    }
+                }
+                byteArray.toJsArray().buffer
+            }
+
+            is OutgoingContent.WriteChannelContent -> {
+                CoroutineScope(callContext).writer(callContext) {
+                    writeTo(channel)
+                }.channel.readRemaining().readByteArray()
+                // 1. 启动一个协程写数据
+                val writerJob = CoroutineScope(callContext).writer(callContext) {
+                    writeTo(channel)
+                }
+                // 2. 等待写协程完成后，再读出 ByteArray
+                val writtenChannel = writerJob.channel
+                // 3. 等写完后，统一读到 byteArray 中
+                writtenChannel.readRemaining().readByteArray().toJsArray().buffer
+            }
+
+            is OutgoingContent.NoContent -> {
+                config.printLog { "data 数据: NoContent" }
+                if (method == HttpMethod.Post) {
+                    "{}".toByteArray().toJsArray().buffer
+                } else {
+                    ByteArray(0).toJsArray().buffer
+                }
+
+            }
+
+            is OutgoingContent.ContentWrapper -> delegate().convertToOhosBody(callContext, method = method)
+            else -> {
+                config.printLog { "data 数据: 不支持的类型" }
+                if (method == HttpMethod.Post) {
+                    "{}".toByteArray().toJsArray().buffer
+                } else {
+                    ByteArray(0).toJsArray().buffer
                 }
             }
-            byteArray.toJsArray().buffer
         }
-
-        is OutgoingContent.WriteChannelContent -> {
-            CoroutineScope(callContext).writer(callContext) {
-                writeTo(channel)
-            }.channel.readRemaining().readByteArray()
-            // 1. 启动一个协程写数据
-            val writerJob = CoroutineScope(callContext).writer(callContext) {
-                writeTo(channel)
-            }
-            // 2. 等待写协程完成后，再读出 ByteArray
-            val writtenChannel = writerJob.channel
-            // 3. 等写完后，统一读到 byteArray 中
-            writtenChannel.readRemaining().readByteArray().toJsArray().buffer
-        }
-
-        is OutgoingContent.NoContent -> {
-            config.printLog { "data 数据: NoContent" }
-            if (method == HttpMethod.Post) {
-                "{}".toByteArray().toJsArray().buffer
-            } else {
-                ByteArray(0).toJsArray().buffer
-            }
-
-        }
-        is OutgoingContent.ContentWrapper -> delegate().convertToOhosBody(callContext,method = method)
-        else -> {
-            config.printLog { "data 数据: 不支持的类型" }
-            if (method == HttpMethod.Post) {
-                "{}".toByteArray().toJsArray().buffer
-            } else {
-                ByteArray(0).toJsArray().buffer
-            }
-        }
-    }
 
     @InternalAPI
     override suspend fun execute(data: HttpRequestData): HttpResponseData {
@@ -141,7 +143,7 @@ internal class OhosJsClientEngine(
             if (config.isDebug) {
                 config.printLog { "body 没有写入之前: data:${data},headers:${data.headers}" }
             }
-            extraData = data.body.convertToOhosBody(callContext)
+            extraData = data.body.convertToOhosBody(callContext, data.method)
             connectTimeout = config.connectTimeout
             readTimeout = config.readTimeout
             usingProtocol = Http.HttpProtocol.HTTP2
