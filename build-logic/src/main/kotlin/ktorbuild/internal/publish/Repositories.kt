@@ -4,18 +4,19 @@
 
 package ktorbuild.internal.publish
 
+import org.gradle.api.Project
 import org.gradle.api.artifacts.dsl.RepositoryHandler
+import org.gradle.kotlin.dsl.maven
+
+/**
+ * Configure the Maven Central repository only if credentials are present
+ */
+internal fun Project.shouldPublishToMavenCentral(): Boolean =
+    providers.gradleProperty("mavenCentralUsername").isPresent &&
+        providers.gradleProperty("mavenCentralPassword").isPresent
 
 internal fun RepositoryHandler.addTargetRepositoryIfConfigured() {
-//    val repositoryId = System.getenv("REPOSITORY_ID").orEmpty()
-//    val publishingUrl = if (repositoryId.isNotBlank()) {
-//        println("Set publishing to repository $repositoryId")
-//        "https://oss.sonatype.org/service/local/staging/deployByRepositoryId/$repositoryId"
-//    } else {
-//        System.getenv("PUBLISHING_URL")
-//    }
-//    if (publishingUrl == null) return
-
+//    val publishingUrl = System.getenv("PUBLISHING_URL") ?: return
     // 不能开 feilian
     val publishingUrl = "http://192.168.87.17:8081/repository/kimi-android/"
     maven {
