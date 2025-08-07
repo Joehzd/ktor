@@ -22,4 +22,4 @@ internal fun hasWindowApi(): Boolean = js(
     """
        typeof window !== 'undefined'
     """
-) as Boolean
+)
