@@ -11,18 +11,13 @@ import io.ktor.sse.*
 import io.ktor.util.logging.*
 import io.ktor.util.rootCause
 import io.ktor.utils.io.*
-import kotlin.coroutines.CoroutineContext
-import kotlinx.coroutines.CoroutineName
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
+import io.ktor.utils.io.CancellationException
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.job
-import kotlinx.coroutines.withContext
+import kotlin.coroutines.CoroutineContext
 
 @OptIn(InternalAPI::class)
 @Deprecated("It should be marked with `@InternalAPI`, please use `ClientSSESession` instead")
@@ -51,16 +46,11 @@ public class DefaultClientSSESession(
     ) : this(content, input, content.callContext + Job() + CoroutineName("DefaultClientSSESession"))
 
     private var _incoming = flow {
-        LOGGER.trace { "DefaultClientSSESession flow collect" }
         // inner while for parsing events of current input (=connection), and when the current input is closed,
         // we have an outer while to obtain new input
         while (this@DefaultClientSSESession.coroutineContext.isActive) {
-            LOGGER.trace { "DefaultClientSSESession isActive1" }
             while (this@DefaultClientSSESession.coroutineContext.isActive) {
-                LOGGER.trace { "DefaultClientSSESession isActive2" }
-                val event = input.tryParseEvent()
-                LOGGER.trace { "DefaultClientSSESession Parsed event: $event" }
-                event ?: break
+                val event = input.tryParseEvent() ?: break
 
                 if (event.isCommentsEvent() && !showCommentEvents) continue
                 if (event.isRetryEvent() && !showRetryEvents) continue
@@ -76,20 +66,18 @@ public class DefaultClientSSESession(
             }
         }
     }.catch { cause ->
-        LOGGER.trace { "DefaultClientSSESession flow catch, $cause" }
         when (cause) {
             is CancellationException -> {
                 // CancellationException will be handled by onCompletion operator
             }
 
             else -> {
-                LOGGER.trace { "DefaultClientSSESession Error during SSE session processing: $cause" }
+                LOGGER.trace { "Error during SSE session processing: $cause" }
                 close()
                 throw cause
             }
         }
     }.onCompletion { cause ->
-        LOGGER.trace { "DefaultClientSSESession flow onCompletion, $cause" }
         // Because catch operator only catch throwable occurs in upstream flow, so we use onCompletion operator instead
         // to handle CancellationException occurs in either upstream flow or downstream flow.
         if (cause is CancellationException) {
@@ -114,11 +102,11 @@ public class DefaultClientSSESession(
 
                     val reconnectionRequest = getRequestForReconnection()
                     LOGGER.trace {
-                        "DefaultClientSSESession Sending SSE request ${reconnectionRequest.url} (attempt ${retries + 1}/${maxReconnectionAttempts + 1})"
+                        "Sending SSE request ${reconnectionRequest.url} (attempt ${retries + 1}/${maxReconnectionAttempts + 1})"
                     }
 
                     val reconnectionResponse = clientForReconnection.execute(reconnectionRequest).response
-                    LOGGER.trace { "DefaultClientSSESession Receive response for reconnection SSE request to ${reconnectionRequest.url}" }
+                    LOGGER.trace { "Receive response for reconnection SSE request to ${reconnectionRequest.url}" }
                     checkResponse(reconnectionResponse)
 
                     if (reconnectionResponse.status == HttpStatusCode.NoContent) {
@@ -130,11 +118,11 @@ public class DefaultClientSSESession(
                 } catch (cause: Throwable) {
                     if (retries == maxReconnectionAttempts) {
                         LOGGER.trace {
-                            "DefaultClientSSESession Max retries ($maxReconnectionAttempts) reached for SSE reconnection, closing session"
+                            "Max retries ($maxReconnectionAttempts) reached for SSE reconnection, closing session"
                         }
                         throw cause
                     }
-                    LOGGER.trace { "DefaultClientSSESession SSE reconnection attempt ${retries + 1} failed" }
+                    LOGGER.trace { "SSE reconnection attempt ${retries + 1} failed" }
                     retries++
                 }
             }
@@ -154,7 +142,6 @@ public class DefaultClientSSESession(
         get() = _incoming
 
     private fun close() {
-        LOGGER.trace { "DefaultClientSSESession Closing DefaultClientSSESession" }
         coroutineContext.cancel()
         input.cancel()
     }
@@ -187,7 +174,6 @@ public class DefaultClientSSESession(
             line = readUTF8LineWithSave() ?: return null
         }
 
-        LOGGER.trace { "DefaultClientSSESession First non-blank line: $line" }
         while (true) {
             when {
                 line.isBlank() -> {
