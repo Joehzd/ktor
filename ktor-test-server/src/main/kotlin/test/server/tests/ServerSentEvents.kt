@@ -73,7 +73,7 @@ internal fun Application.serverSentEvents() {
                     writeSseEvents(events)
                 }
             }
-            get("/echo") {
+            post("/echo") {
                 call.respondSseEvents(
                     flow {
                         emit(SseEvent(call.receiveText()))
@@ -170,6 +170,9 @@ internal fun Application.serverSentEvents() {
                 } else {
                     call.respond(HttpStatusCode.NoContent)
                 }
+            }
+            get("/error") {
+                call.respond(HttpStatusCode.InternalServerError, "Server error")
             }
         }
     }
