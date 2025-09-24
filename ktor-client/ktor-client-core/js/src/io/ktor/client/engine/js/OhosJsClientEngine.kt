@@ -273,7 +273,10 @@ internal class OhosJsClientEngine(
             type = "headersReceive",
             callback = { headers: Any ->
                 if (config.isDebug) {
-                    config.printLog { "executeStreamingRequest, headersReceive" }
+                    jsForEach(headers, { key, value ->
+                        config.printLog { "executeStreamingRequest, headersReceive, $key = $value" }
+                    }
+                    )
                 }
                 responseHeaders = headers
             }
