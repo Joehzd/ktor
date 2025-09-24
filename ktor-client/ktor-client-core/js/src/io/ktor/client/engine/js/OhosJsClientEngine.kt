@@ -28,6 +28,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.io.readByteArray
 import io.ktor.utils.io.core.*
 import io.ktor.client.call.UnsupportedContentTypeException
+import io.ktor.client.call.body
 import io.ktor.client.engine.CLIENT_CONFIG
 import io.ktor.client.engine.HttpClientEngineBase
 import io.ktor.client.engine.callContext
@@ -154,6 +155,14 @@ internal class OhosJsClientEngine(
             return executeSseRequest(httpRequest, data, options, callContext)
         }
 
+        // 使用流式处理请求
+        val isStreaming = data.headers["ktor-js-streaming"] == "true"
+        if (config.isDebug) {
+            config.printLog { "executeStreamingRequest, data.body:${data.body}" }
+        }
+        if (isStreaming) {
+            return executeStreamingRequest(httpRequest, data, options, callContext)
+        }
         val response = httpRequest.request(data.url.toString(), options).then(onFulfilled = {
             it
         }, onRejected = {
@@ -243,6 +252,123 @@ internal class OhosJsClientEngine(
     }
 
     @OptIn(InternalAPI::class)
+    private suspend fun executeStreamingRequest(
+        httpRequest: Http.HttpRequest,
+        requestData: HttpRequestData,
+        options: Http.HttpRequestOptions,
+        callContext: CoroutineContext
+    ): HttpResponseData {
+        val requestTime = GMTDate()
+        val _incoming: Channel<ByteArray> = Channel(Channel.UNLIMITED)
+        val incoming: ReceiveChannel<ByteArray> = _incoming
+
+        // Store response headers
+        var responseHeaders: dynamic = js("({})")
+        var responseCode: Int = 200
+
+        val responseChannel = ByteChannel(autoFlush = true)
+
+        // 设置header接收监听器
+        httpRequest.on(
+            type = "headersReceive",
+            callback = { headers: Any ->
+                if (config.isDebug) {
+                    config.printLog { "executeStreamingRequest, headersReceive" }
+                }
+                responseHeaders = headers
+            }
+        )
+
+        // 设置数据接收监听器
+        httpRequest.on(
+            type = "dataReceive",
+            callback = { arrayBuffer: ArrayBuffer ->
+                if (config.isDebug) {
+                    config.printLog { "executeStreamingRequest, dataReceive ${Uint8Array(arrayBuffer).asByteArray()}" }
+                }
+                _incoming.trySend(Uint8Array(arrayBuffer).asByteArray())
+            }
+        )
+
+        httpRequest.on(
+            type = "dataEnd",
+            callback = { unit: Unit ->
+                if (config.isDebug) {
+                    config.printLog { "executeStreamingRequest, dataEnd" }
+                }
+                responseChannel.close()
+                _incoming.close()
+            }
+        )
+
+        httpRequest.on(
+            type = "dataReceiveProgress",
+            callback = { progress: DataProgress ->
+                if (config.isDebug) {
+                    config.printLog { "executeStreamingRequest, dataReceiveProgress, $progress" }
+                }
+            }
+        )
+
+        // 启动协程以将数据从通道传输到响应通道
+        CoroutineScope(callContext).launch {
+            try {
+                incoming.consumeEach { byteArray ->
+                    if (responseChannel.isClosedForWrite.not()) {
+                        responseChannel.writeFully(byteArray)
+                        responseChannel.flush()
+                    }
+                }
+            } catch (e: Exception) {
+                if (config.isDebug) {
+                    config.printLog { "executeStreamingRequest, data transfer error: ${e.message}" }
+                }
+            }
+        }
+
+        // Start the streaming request
+        val result = httpRequest.requestInStream(
+            requestData.url.toString(),
+            options
+        ).then { errorCode ->
+            responseCode = errorCode
+            if (config.isDebug) {
+                config.printLog { "executeStreamingRequest, completed with code: $errorCode" }
+            }
+            httpRequest.destroy()
+        }.catch { throwable ->
+            responseCode = 500
+            httpRequest.destroy()
+            if (config.isDebug) {
+                config.printLog { "executeStreamingRequest, error: ${throwable::class.simpleName}, ${throwable.message}" }
+            }
+            responseChannel.close(throwable)
+            _incoming.close(throwable)
+        }
+
+        return HttpResponseData(
+            HttpStatusCode(responseCode, ""),
+            requestTime,
+            buildHeaders {
+                jsForEach(obj = responseHeaders) { key, value ->
+                    append(key.toString(), value.toString())
+                    if (config.isDebug) {
+                        config.printLog {
+                            "streaming header: ${key.toString()} = ${value.toString()}"
+                        }
+                    }
+                }
+                if (isEmpty()) {
+                    append(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+                }
+            },
+            HttpProtocolVersion.HTTP_2_0,
+            responseChannel,
+            callContext
+        )
+    }
+
+    @OptIn(InternalAPI::class)
     private suspend fun CoroutineScope.executeSseRequest(
         httpRequest: Http.HttpRequest,
         requestData: HttpRequestData,
@@ -277,7 +403,7 @@ internal class OhosJsClientEngine(
             callback = { arrayBuffer: ArrayBuffer ->
                 config.printLog { "executeSseRequest, dataReceive, ${this.isActive}" }
                 if (this.isActive) {
-                    _incoming.trySend(Int8Array(arrayBuffer).toByteArray())
+                    _incoming.trySend(Uint8Array(arrayBuffer).asByteArray())
                 }
             }
         )
@@ -391,5 +517,12 @@ internal class OhosJsClientEngine(
                 this@awaitConnection.close(null)
             }
         }
+    }
+}
+
+public fun jsForEach(obj: dynamic, action: (key: String, value: dynamic) -> Unit) {
+    val keys = js("Object.keys(obj)") as Array<String>
+    keys.forEach { key ->
+        action(key, obj[key])
     }
 }

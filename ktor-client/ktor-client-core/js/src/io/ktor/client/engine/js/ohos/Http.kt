@@ -684,7 +684,7 @@ internal external class Http {
          * @crossplatform
          * @since 10
          */
-        fun on(type: String /* "headersReceive" */, callback: Callback<Any>)
+        fun on(type: String /* "headersReceive" */, callback: (Any) -> Unit)
         /**
          * Unregisters the observer for HTTP Response Header events.
          * @param { "headersReceive" } type - Indicates Event name.
