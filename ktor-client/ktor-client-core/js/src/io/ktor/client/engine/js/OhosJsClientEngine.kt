@@ -296,11 +296,13 @@ internal class OhosJsClientEngine(
         httpRequest.on(
             type = "dataEnd",
             callback = { unit: Unit ->
-                if (config.isDebug) {
-                    config.printLog { "executeStreamingRequest, dataEnd" }
+                CoroutineScope(callContext).launch {
+                    if (config.isDebug) {
+                        config.printLog { "executeStreamingRequest, dataEnd" }
+                    }
+                    responseChannel.close()
+                    _incoming.close()
                 }
-                responseChannel.close()
-                _incoming.close()
             }
         )
 
