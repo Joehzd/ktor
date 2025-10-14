@@ -46,7 +46,12 @@ import io.ktor.http.content.*
 import io.ktor.util.*
 import io.ktor.util.date.*
 import io.ktor.utils.io.*
+import io.ktor.utils.io.charsets.Charset
+import io.ktor.utils.io.charsets.MalformedInputException
+import io.ktor.utils.io.charsets.charset
+import io.ktor.utils.io.charsets.name
 import io.ktor.utils.io.core.*
+import io.ktor.utils.io.js.ohos.Util
 import io.ktor.websocket.Frame
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -133,6 +138,8 @@ internal class OhosJsClientEngine(
         val httpRequest = Http.createHttp()
 
         val options: Http.HttpRequestOptions = js("{}")
+        // 使用流式处理请求
+        val isStreaming = data.headers["ktor-js-streaming"] == "true"
         options.apply {
             method = data.method.value
 
@@ -146,17 +153,16 @@ internal class OhosJsClientEngine(
             }
             extraData = data.body.convertToOhosBody(callContext, data.method)
             connectTimeout = config.connectTimeout
-            readTimeout = config.readTimeout
+            readTimeout = if (isStreaming) config.readStreamTimeout else config.readTimeout
             usingProtocol = Http.HttpProtocol.HTTP2
             expectDataType = Http.HttpDataType.ARRAY_BUFFER
+            maxLimit = 100 * 1024 * 1024
         }
 
         if (data.isSseRequest()) {
             return executeSseRequest(httpRequest, data, options, callContext)
         }
 
-        // 使用流式处理请求
-        val isStreaming = data.headers["ktor-js-streaming"] == "true"
         if (config.isDebug) {
             config.printLog { "executeStreamingRequest, data.body:${data.body}" }
         }
@@ -286,10 +292,17 @@ internal class OhosJsClientEngine(
         httpRequest.on(
             type = "dataReceive",
             callback = { arrayBuffer: ArrayBuffer ->
+                val uintArray = Uint8Array(arrayBuffer)
                 if (config.isDebug) {
-                    config.printLog { "executeStreamingRequest, dataReceive ${Uint8Array(arrayBuffer).asByteArray()}" }
+                    val decoder = Util.TextDecoder("utf-8")
+                    val result = try {
+                        decoder.decodeToString(uintArray)
+                    } catch (cause: Throwable) {
+                        throw MalformedInputException("Failed to decode bytes: ${cause.message ?: "no cause provided"}")
+                    }
+                    config.printLog { "executeStreamingRequest, dataReceive $result" }
                 }
-                _incoming.trySend(Uint8Array(arrayBuffer).asByteArray())
+                _incoming.trySend(uintArray.asByteArray())
             }
         )
 

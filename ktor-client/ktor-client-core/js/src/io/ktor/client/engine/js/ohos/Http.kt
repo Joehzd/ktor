@@ -248,6 +248,95 @@ internal external class Http {
          * @since 10
          */
         var caPath: String?
+        /**
+         * Used to set to uploading or downloading the start bytes. The default value is 0.
+         * HTTP standard (RFC 7233 section 3.1) allows servers to ignore range requests.
+         * For HTTP PUT uploads this option should not be used, since it may conflict with other options.
+         * @type {?number}
+         * @syscap SystemCapability.Communication.NetStack
+         * @since 11
+         */
+        /**
+         * Used to set to uploading or downloading the start bytes. The default value is 0.
+         * HTTP standard (RFC 7233 section 3.1) allows servers to ignore range requests.
+         * For HTTP PUT uploads this option should not be used, since it may conflict with other options.
+         * @type {?number}
+         * @syscap SystemCapability.Communication.NetStack
+         * @crossplatform
+         * @since 12
+         */
+        var resumeFrom: Int?
+        /**
+         * Used to set to uploading or downloading the end bytes. Translate to the end if not set.
+         * HTTP standard (RFC 7233 section 3.1) allows servers to ignore range requests.
+         * For HTTP PUT uploads this option should not be used, since it may conflict with other options.
+         * @type {?number}
+         * @syscap SystemCapability.Communication.NetStack
+         * @since 11
+         */
+        /**
+         * Used to set to uploading or downloading the end bytes. Translate to the end if not set.
+         * HTTP standard (RFC 7233 section 3.1) allows servers to ignore range requests.
+         * For HTTP PUT uploads this option should not be used, since it may conflict with other options.
+         * @type {?number}
+         * @syscap SystemCapability.Communication.NetStack
+         * @crossplatform
+         * @since 12
+         */
+        var resumeTo: Int?
+
+        /**
+         * If this parameter is set, incoming DNS resolution server URL for the DoH server to use for name resolving.
+         * The parameter must be URL-encoded in the following format: "https://host:port/path".
+         * It MUST specify an HTTPS URL.
+         * @type {?string}
+         * @syscap SystemCapability.Communication.NetStack
+         * @since 11
+         */
+        /**
+         * If this parameter is set, incoming DNS resolution server URL for the DoH server to use for name resolving.
+         * The parameter must be URL-encoded in the following format: "https://host:port/path".
+         * It MUST specify an HTTPS URL.
+         * @type {?string}
+         * @syscap SystemCapability.Communication.NetStack
+         * @crossplatform
+         * @since 12
+         */
+        var dnsOverHttps: String?
+        /**
+         * If this parameter is set, use the specified DNS server for DNS resolution.
+         * Multiple DNS resolution servers can be set up, with a maximum of 3 servers.
+         * Only take the first three if there are more than three.
+         * @type {?Array<string>}
+         * @syscap SystemCapability.Communication.NetStack
+         * @since 11
+         */
+        /**
+         * If this parameter is set, use the specified DNS server for DNS resolution.
+         * Multiple DNS resolution servers can be set up, with a maximum of 3 servers.
+         * Only take the first three if there are more than three.
+         * @type {?Array<string>}
+         * @syscap SystemCapability.Communication.NetStack
+         * @crossplatform
+         * @since 12
+         */
+        var dnsServers: Array<String>?
+        /**
+         * The maximum limit of the response body. The default value is 5 * 1024 * 1024, in Byte.
+         * The maximum value is 100 * 1024 *1024, in Byte.
+         * @type {?number}
+         * @syscap SystemCapability.Communication.NetStack
+         * @since 11
+         */
+        /**
+         * The maximum limit of the response body. The default value is 5 * 1024 * 1024, in Byte.
+         * The maximum value is 100 * 1024 *1024, in Byte.
+         * @type {?number}
+         * @syscap SystemCapability.Communication.NetStack
+         * @crossplatform
+         * @since 12
+         */
+        var maxLimit: Int?
     }
     /**
      * <p>Defines an HTTP request task. Before invoking APIs provided by HttpRequest,

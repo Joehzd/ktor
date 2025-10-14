@@ -6,14 +6,15 @@ import org.khronos.webgl.Uint8Array
 
 @JsModule("@ohos.util")
 @JsNonModule
-internal external class Util {
-    internal class TextDecoder(encoding: String, options: dynamic = definedExternally) {
-        val encoding: String
+public external class Util {
+    public class TextDecoder(encoding: String, options: dynamic = definedExternally) {
+        public val encoding: String
 
-       fun decodeWithStream(buffer: Uint8Array, options: dynamic = definedExternally): String
+       public fun decodeWithStream(buffer: Uint8Array, options: dynamic = definedExternally): String
+       public fun decodeToString(input: Uint8Array, options: dynamic = definedExternally): String
     }
-    internal class TextEncoder {
-        fun encode(input: String): Uint8Array
+    public class TextEncoder {
+        public fun encode(input: String): Uint8Array
     }
 }
 
