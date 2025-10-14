@@ -313,7 +313,6 @@ internal class OhosJsClientEngine(
                     if (config.isDebug) {
                         config.printLog { "executeStreamingRequest, dataEnd" }
                     }
-                    responseChannel.close()
                     _incoming.close()
                 }
             }
@@ -341,6 +340,8 @@ internal class OhosJsClientEngine(
                 if (config.isDebug) {
                     config.printLog { "executeStreamingRequest, data transfer error: ${e.message}" }
                 }
+            } finally {
+                responseChannel.close()
             }
         }
 
