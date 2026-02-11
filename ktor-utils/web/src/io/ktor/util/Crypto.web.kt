@@ -4,6 +4,7 @@
 
 package io.ktor.util
 
+import io.ktor.util.ohos.*
 import kotlinx.coroutines.*
 import org.khronos.webgl.*
 import kotlin.js.*
@@ -14,9 +15,13 @@ import kotlin.js.*
  * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.util.generateNonce)
  */
 public actual fun generateNonce(): String {
-    val buffer = ByteArray(NONCE_SIZE_IN_BYTES).toJsArray()
-    _crypto.getRandomValues(buffer)
-    return hex(buffer.toByteArray())
+    if (PlatformUtils.IS_OHOS) {
+        return getNonceString()
+    } else {
+        val buffer = ByteArray(NONCE_SIZE_IN_BYTES).toJsArray()
+        _crypto.getRandomValues(buffer)
+        return hex(buffer.toByteArray())
+    }
 }
 
 /**
@@ -35,9 +40,13 @@ public actual fun Digest(name: String): Digest = object : Digest {
     }
 
     override suspend fun build(): ByteArray {
-        val snapshot = state.reduce { a, b -> a + b }.toJsArray()
-        val digestBuffer = _crypto.subtle.digest(name, snapshot).awaitBuffer()
-        val digestView = DataView(digestBuffer)
+        val snapshot = state.reduce { a, b -> a + b }
+        val digestView = if (PlatformUtils.IS_OHOS) {
+            val digestBuffer = digestBufferArray(name, snapshot)
+            DataView(digestBuffer.buffer, digestBuffer.byteOffset, digestBuffer.length)
+        } else {
+            DataView(_crypto.subtle.digest(name, snapshot.toJsArray()).awaitBuffer())
+        }
         return ByteArray(digestView.byteLength) { digestView.getUint8(it) }
     }
 }

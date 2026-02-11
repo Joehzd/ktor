@@ -16,10 +16,12 @@ internal fun Project.shouldPublishToMavenCentral(): Boolean =
         providers.gradleProperty("mavenCentralPassword").isPresent
 
 internal fun RepositoryHandler.addTargetRepositoryIfConfigured() {
-    val publishingUrl = System.getenv("PUBLISHING_URL") ?: return
-
-    maven(url = publishingUrl) {
-        name = System.getenv("REPOSITORY_NAME") ?: "maven"
+//    val publishingUrl = System.getenv("PUBLISHING_URL") ?: return
+    // 不能开 feilian
+    val publishingUrl = "http://192.168.87.17:8081/repository/kimi-android/"
+    maven {
+        setUrl(publishingUrl)
+        isAllowInsecureProtocol = true
         credentials {
             username = System.getenv("PUBLISHING_USER")
             password = System.getenv("PUBLISHING_PASSWORD")

@@ -16,7 +16,7 @@ addProjectTag(ProjectTag.Published)
 
 mavenPublishing {
     if (shouldPublishToMavenCentral()) publishToMavenCentral(automaticRelease = true)
-    configureSigning(this)
+//    configureSigning(this)
 
     pom {
         name = project.name

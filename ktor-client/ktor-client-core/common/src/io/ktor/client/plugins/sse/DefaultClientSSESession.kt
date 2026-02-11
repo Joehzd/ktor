@@ -41,6 +41,8 @@ public class DefaultClientSSESession(
 
     private val closed = atomic(false)
 
+    private val callContext = content.callContext
+
     override fun bodyBuffer(): ByteArray = bodyBuffer.toByteArray()
 
     public constructor(

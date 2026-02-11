@@ -81,8 +81,10 @@ internal class JsClientEngine(
         return when {
             PlatformUtils.IS_BROWSER -> js("new WebSocket(urlString_capturingHack, protocols)")
             else -> {
-                val ws_import: Promise<dynamic> = js("import('ws')")
-                val ws_capturingHack = ws_import.await().default
+                val ws_capturingHack = js("eval('require')('ws')")
+                // 这行需要换成require实现，否则编译不过
+//                val ws_import: Promise<dynamic> = js("import('ws')")
+//                val ws_capturingHack = ws_import.await().default
                 val headers_capturingHack: dynamic = object {}
                 headers.forEach { name, values ->
                     headers_capturingHack[name] = values.joinToString(",")
@@ -154,7 +156,7 @@ private suspend fun WebSocket.awaitConnection(): WebSocket = suspendCancellableC
     }
 }
 
-private fun Event.asString(): String = buildString {
+public fun Event.asString(): String = buildString {
     append(JSON.stringify(this@asString, arrayOf("message", "target", "type", "isTrusted")))
 }
 
