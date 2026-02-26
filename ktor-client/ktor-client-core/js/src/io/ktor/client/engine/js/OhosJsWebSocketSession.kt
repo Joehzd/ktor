@@ -13,9 +13,10 @@ import io.ktor.util.*
 import io.ktor.utils.io.*
 import io.ktor.utils.io.core.*
 import io.ktor.websocket.*
+import org.khronos.webgl.ArrayBuffer
+import org.khronos.webgl.Int8Array
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
-import org.khronos.webgl.*
 import org.w3c.dom.*
 import kotlin.coroutines.*
 

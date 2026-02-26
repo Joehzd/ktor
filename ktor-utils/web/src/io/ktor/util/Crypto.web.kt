@@ -4,7 +4,7 @@
 
 package io.ktor.util
 
-import io.ktor.util.ohos.*
+import io.ktor.util.ohos.digestBufferArray
 import kotlinx.coroutines.*
 import org.khronos.webgl.*
 import kotlin.js.*
@@ -15,14 +15,10 @@ import kotlin.js.*
  * [Report a problem](https://ktor.io/feedback/?fqname=io.ktor.util.generateNonce)
  */
 public actual fun generateNonce(): String {
-    if (PlatformUtils.IS_OHOS) {
-        return getNonceString()
-    } else {
         val buffer = ByteArray(NONCE_SIZE_IN_BYTES).toJsArray()
         _crypto.getRandomValues(buffer)
         return hex(buffer.toByteArray())
     }
-}
 
 /**
  * Create [Digest] from specified hash [name].
